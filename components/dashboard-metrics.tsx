@@ -145,14 +145,9 @@ export function DashboardMetrics() {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={120}
+                  innerRadius={80}
+                  outerRadius={160}
                   paddingAngle={2}
-                  label={({ name, value }) => `${name}: ${new Intl.NumberFormat('vi-VN', {
-                    style: 'currency',
-                    currency: 'VND',
-                    maximumFractionDigits: 0,
-                  }).format(value)}`}
                 >
                   {categoryTotals.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
