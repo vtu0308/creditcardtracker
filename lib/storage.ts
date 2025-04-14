@@ -21,13 +21,21 @@ export interface Transaction {
   description: string
   amount: number
   currency: string
-  vndAmount?: number
+  vndAmount: number  // Amount in VND after conversion
   createdAt: string
   updatedAt: string
   cardId: string
   cardName: string
   categoryId: string
   categoryName: string
+}
+
+// Currency conversion configuration
+const SUPPORTED_CURRENCIES = ['VND', 'USD', 'EUR', 'JPY', 'SGD'] as const
+export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number]
+
+export const isSupportedCurrency = (currency: string): currency is SupportedCurrency => {
+  return SUPPORTED_CURRENCIES.includes(currency as SupportedCurrency)
 }
 
 // Helper function to safely parse JSON from localStorage
@@ -105,6 +113,7 @@ const defaultTransactions: Transaction[] = [
     categoryName: "Food",
     amount: 850000,
     currency: "VND",
+    vndAmount: 850000,
     cardId: "1",
     cardName: "Visa Platinum",
     createdAt: new Date().toISOString(),
@@ -118,6 +127,7 @@ const defaultTransactions: Transaction[] = [
     categoryName: "Food & Drink",
     amount: 120000,
     currency: "VND",
+    vndAmount: 120000,
     cardId: "2",
     cardName: "Mastercard Gold",
     createdAt: new Date().toISOString(),
@@ -131,6 +141,7 @@ const defaultTransactions: Transaction[] = [
     categoryName: "Shopping",
     amount: 1250000,
     currency: "VND",
+    vndAmount: 1250000,
     cardId: "1",
     cardName: "Visa Platinum",
     createdAt: new Date().toISOString(),
@@ -253,16 +264,23 @@ export const storage = {
       return
     }
 
-    if (!localStorage.getItem(CARDS_KEY)) {
+    const existingTransactions = storage.getTransactions()
+    const existingCards = storage.getCards()
+    const existingCategories = storage.getCategories()
+
+    if (existingTransactions.length === 0) {
+      storage.setTransactions(defaultTransactions)
+    }
+
+    if (existingCards.length === 0) {
       storage.setCards(defaultCards)
     }
 
-    if (!localStorage.getItem(CATEGORIES_KEY)) {
+    if (existingCategories.length === 0) {
       storage.setCategories(defaultCategories)
     }
 
-    if (!localStorage.getItem(TRANSACTIONS_KEY)) {
-      storage.setTransactions(defaultTransactions)
-    }
+    // Dispatch event to notify components
+    window.dispatchEvent(new Event('storage-changed'))
   },
 }

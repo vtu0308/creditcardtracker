@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { storage } from "@/lib/storage"
+import { storage, SupportedCurrency, isSupportedCurrency } from "@/lib/storage"
+import { convertToVND } from "@/lib/currency"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -16,35 +17,51 @@ interface AddTransactionDialogProps {
 export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialogProps) {
   const [description, setDescription] = useState("")
   const [amount, setAmount] = useState("")
+  const [currency, setCurrency] = useState<SupportedCurrency>("VND")
   const [cardId, setCardId] = useState("")
   const [categoryId, setCategoryId] = useState("")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (description && amount && cardId && categoryId && date) {
-      const cards = storage.getCards()
-      const categories = storage.getCategories()
-      const card = cards.find(c => c.id === cardId)
-      const category = categories.find(c => c.id === categoryId)
-      
-      if (card && category) {
-        storage.addTransaction({
-          description,
-          amount: parseFloat(amount),
-          cardId,
-          cardName: card.name,
-          categoryId,
-          categoryName: category.name,
-          date: new Date(date).toISOString(),
-          currency: "VND"
-        })
-        setDescription("")
-        setAmount("")
-        setCardId("")
-        setCategoryId("")
-        setDate(new Date().toISOString().split("T")[0])
-        onOpenChange?.(false)
+    if (description && amount && cardId && categoryId && date && !isSubmitting) {
+      setIsSubmitting(true)
+      try {
+        const cards = storage.getCards()
+        const categories = storage.getCategories()
+        const card = cards.find(c => c.id === cardId)
+        const category = categories.find(c => c.id === categoryId)
+        
+        if (card && category) {
+          const numericAmount = parseFloat(amount)
+          const vndAmount = await convertToVND(numericAmount, currency)
+          
+          storage.addTransaction({
+            description,
+            amount: numericAmount,
+            currency,
+            vndAmount,
+            cardId,
+            cardName: card.name,
+            categoryId,
+            categoryName: category.name,
+            date: new Date(date).toISOString(),
+          })
+          
+          setDescription("")
+          setAmount("")
+          setCurrency("VND")
+          setCardId("")
+          setCategoryId("")
+          setDate(new Date().toISOString().split("T")[0])
+          onOpenChange?.(false)
+        }
+      } catch (error) {
+        console.error('Error adding transaction:', error)
+        // You might want to show an error message to the user here
+      } finally {
+        setIsSubmitting(false)
       }
     }
   }
@@ -69,15 +86,36 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                 placeholder="e.g. Grocery Shopping"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g. 100000"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="amount">Amount</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="e.g. 100000"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="currency">Currency</Label>
+                <Select value={currency} onValueChange={(value) => {
+                  if (isSupportedCurrency(value)) {
+                    setCurrency(value)
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="VND">VND</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="JPY">JPY</SelectItem>
+                    <SelectItem value="SGD">SGD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="card">Card</Label>
@@ -120,7 +158,9 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Add Transaction</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add Transaction"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

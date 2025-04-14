@@ -1,18 +1,16 @@
-import type { Metadata } from "next"
-import { Atkinson_Hyperlegible } from "next/font/google"
 import "./globals.css"
+import { Plus_Jakarta_Sans } from "next/font/google"
 import { MainNav } from "@/components/main-nav"
-import { RootLayoutClient } from "./client-layout"
+import { ClientLayout } from "./client-layout"
 
-const atkinson = Atkinson_Hyperlegible({
-  weight: ['400', '700'],
-  subsets: ['latin'],
-  display: 'swap',
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
 })
 
-export const metadata: Metadata = {
-  title: "CardTracker",
-  description: "Track your credit card expenses and manage statement cycles",
+export const metadata = {
+  title: "Credit Card Tracker",
+  description: "Track your credit card spending and due dates",
 }
 
 export default function RootLayout({
@@ -21,18 +19,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className={`${atkinson.className} h-full`}>
-        <RootLayoutClient>
-          <div className="min-h-full bg-[#F5E3E0]">
-            <MainNav />
-            <div className="py-6">
-              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                {children}
-              </div>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
+        <ClientLayout>
+          <MainNav />
+          <main className="py-6">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              {children}
             </div>
-          </div>
-        </RootLayoutClient>
+          </main>
+        </ClientLayout>
       </body>
     </html>
   )
