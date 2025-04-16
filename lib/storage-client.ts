@@ -1,16 +1,16 @@
-interface Card {
+export interface Card {
   id: string
   name: string
   statementDay: number
   dueDay: number
 }
 
-interface Category {
+export interface Category {
   id: string
   name: string
 }
 
-interface Transaction {
+export interface Transaction {
   id: string
   description: string
   amount: number

@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import "./globals.css"
 import { Plus_Jakarta_Sans } from "next/font/google"
 import { MainNav } from "@/components/main-nav"
@@ -8,9 +9,9 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
 })
 
-export const metadata = {
-  title: "Credit Card Tracker",
-  description: "Track your credit card spending and due dates",
+export const metadata: Metadata = {
+  title: "CardTracker",
+  description: "Track your credit card expenses and manage statement cycles",
 }
 
 export default function RootLayout({
