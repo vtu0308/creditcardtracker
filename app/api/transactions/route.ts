@@ -3,6 +3,7 @@ import prisma from '@/lib/db'
 
 export async function GET() {
   try {
+    console.log('API: Fetching transactions...')
     const transactions = await prisma.transaction.findMany({
       include: {
         card: true,
@@ -10,8 +11,10 @@ export async function GET() {
       },
       orderBy: { date: 'desc' }
     })
+    console.log('API: Found transactions:', transactions)
     return NextResponse.json(transactions)
   } catch (error) {
+    console.error('API: Error fetching transactions:', error)
     return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
   }
 }

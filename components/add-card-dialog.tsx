@@ -25,6 +25,8 @@ export function AddCardDialog({ open, onOpenChange }: AddCardDialogProps) {
         statementDay: parseInt(statementDay),
         dueDay: parseInt(dueDay)
       })
+      // Dispatch storage-changed event
+      window.dispatchEvent(new Event('storage-changed'))
       setName("")
       setStatementDay("")
       setDueDay("")

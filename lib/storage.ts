@@ -107,27 +107,27 @@ const defaultCategories: Category[] = [
 const defaultTransactions: Transaction[] = [
   {
     id: "1",
-    date: new Date("2025-04-10").toISOString(),
-    description: "Grocery Shopping",
-    categoryId: "1",
-    categoryName: "Food",
-    amount: 850000,
-    currency: "VND",
-    vndAmount: 850000,
-    cardId: "1",
-    cardName: "Visa Platinum",
+    date: new Date("2025-03-27").toISOString(),
+    description: "cider 2",
+    categoryId: "3",
+    categoryName: "Shopping",
+    amount: 50,
+    currency: "EUR",
+    vndAmount: 1500000, // 50 EUR ≈ 1.5M VND
+    cardId: "2",
+    cardName: "Mastercard Gold",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
     id: "2",
-    date: new Date("2025-04-09").toISOString(),
-    description: "Coffee Shop",
-    categoryId: "2",
-    categoryName: "Food & Drink",
-    amount: 120000,
-    currency: "VND",
-    vndAmount: 120000,
+    date: new Date("2025-03-20").toISOString(),
+    description: "cider",
+    categoryId: "3",
+    categoryName: "Shopping",
+    amount: 50,
+    currency: "EUR",
+    vndAmount: 1500000, // 50 EUR ≈ 1.5M VND
     cardId: "2",
     cardName: "Mastercard Gold",
     createdAt: new Date().toISOString(),
@@ -135,18 +135,46 @@ const defaultTransactions: Transaction[] = [
   },
   {
     id: "3",
-    date: new Date("2025-04-08").toISOString(),
-    description: "Online Purchase",
-    categoryId: "3",
-    categoryName: "Shopping",
-    amount: 1250000,
-    currency: "VND",
-    vndAmount: 1250000,
-    cardId: "1",
-    cardName: "Visa Platinum",
+    date: new Date("2025-03-30").toISOString(),
+    description: "coffee",
+    categoryId: "2",
+    categoryName: "Food & Drink",
+    amount: 10,
+    currency: "EUR",
+    vndAmount: 292300, // 10 EUR ≈ 292.3K VND
+    cardId: "2",
+    cardName: "Mastercard Gold",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: "4",
+    date: new Date("2025-04-14").toISOString(),
+    description: "coffee 2",
+    categoryId: "3",
+    categoryName: "Shopping",
+    amount: 2,
+    currency: "USD",
+    vndAmount: 51500, // 2 USD ≈ 51.5K VND
+    cardId: "2",
+    cardName: "Mastercard Gold",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "5",
+    date: new Date("2025-04-14").toISOString(),
+    description: "metro 2",
+    categoryId: "4",
+    categoryName: "Transportation",
+    amount: 2,
+    currency: "EUR",
+    vndAmount: 58000, // 2 EUR ≈ 58K VND
+    cardId: "2",
+    cardName: "Mastercard Gold",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
 ]
 
 // Storage service
@@ -255,7 +283,7 @@ export const storage = {
   // Helpers
   getCardBalance: (cardId: string) => {
     const transactions = storage.getTransactions()
-    return transactions.filter((t) => t.cardId === cardId).reduce((sum, t) => sum + t.amount, 0)
+    return transactions.filter((t) => t.cardId === cardId).reduce((sum, t) => sum + t.vndAmount, 0)
   },
 
   // Initialize storage with default values if empty
@@ -282,5 +310,25 @@ export const storage = {
 
     // Dispatch event to notify components
     window.dispatchEvent(new Event('storage-changed'))
+  },
+
+  initializeDefaultCategories: () => {
+    const defaultCategories = [
+      { id: 'food', name: 'Food & Dining', color: '#FF6B6B' },
+      { id: 'shopping', name: 'Shopping', color: '#4ECDC4' },
+      { id: 'transport', name: 'Transportation', color: '#45B7D1' },
+      { id: 'utilities', name: 'Bills & Utilities', color: '#96CEB4' },
+      { id: 'entertainment', name: 'Entertainment', color: '#FFEEAD' },
+      { id: 'health', name: 'Health & Wellness', color: '#D4A5A5' },
+      { id: 'education', name: 'Education', color: '#9B9B9B' },
+      { id: 'other', name: 'Other', color: '#A8A8A8' }
+    ];
+
+    const existingCategories = storage.getCategories();
+    if (existingCategories.length === 0) {
+      defaultCategories.forEach(category => {
+        storage.addCategory(category.name);
+      });
+    }
   },
 }

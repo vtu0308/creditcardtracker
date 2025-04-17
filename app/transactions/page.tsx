@@ -3,23 +3,27 @@
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { AddTransactionDialog } from "@/components/add-transaction-dialog"
-import { storage } from "@/lib/storage-client"
-import { formatCurrency } from "@/lib/currency"
-import type { Transaction } from "@/lib/storage-client"
+import { storage, Transaction } from "@/lib/storage"
+import { TransactionItem } from "@/components/transaction-item"
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadTransactions = async () => {
       try {
+        console.log('Fetching transactions...')
         const data = await storage.getTransactions()
+        console.log('Received transactions:', data)
         setTransactions(data)
         setFilteredTransactions(data)
-      } catch (error) {
-        console.error('Error loading transactions:', error)
+        setError(null)
+      } catch (err) {
+        console.error('Error loading transactions:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load transactions')
       }
     }
 
@@ -69,32 +73,7 @@ export default function TransactionsPage() {
 
           <div className="space-y-4">
             {filteredTransactions.map(transaction => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-4 rounded-lg border bg-white/80 backdrop-blur-sm"
-              >
-                <div className="space-y-1">
-                  <h3 className="font-medium">{transaction.description}</h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{transaction.card?.name}</span>
-                    <span>•</span>
-                    <span>{transaction.category?.name}</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(transaction.date).toLocaleDateString()}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">
-                    {formatCurrency(transaction.vndAmount || transaction.amount, 'VND')}
-                  </div>
-                  {transaction.vndAmount && transaction.amount !== transaction.vndAmount && (
-                    <div className="text-sm text-muted-foreground">
-                      ≈ {formatCurrency(transaction.amount, 'EUR')}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <TransactionItem key={transaction.id} transaction={transaction} />
             ))}
 
             {filteredTransactions.length === 0 && (

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { storage } from "@/lib/storage"
 import { formatCurrency } from "@/lib/currency"
+import { Label } from "./ui/label"
 
 interface SpendingAnalyticsProps {
   className?: string
@@ -173,14 +174,12 @@ export function SpendingAnalytics({ className }: SpendingAnalyticsProps) {
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>Spending Analytics</CardTitle>
+        <CardTitle>Statement Cycle Deep Dive</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="card-filter" className="text-sm font-medium">
-              Filter by Card
-            </label>
+            <Label>Filter by Card</Label>
             <Select value={selectedCard} onValueChange={setSelectedCard}>
               <SelectTrigger id="card-filter">
                 <SelectValue placeholder="All Cards" />
@@ -197,9 +196,7 @@ export function SpendingAnalytics({ className }: SpendingAnalyticsProps) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="cycle-filter" className="text-sm font-medium">
-              Filter by Statement Cycle
-            </label>
+            <Label>Filter by Statement Cycle</Label>
             <Select value={selectedCycle} onValueChange={setSelectedCycle}>
               <SelectTrigger id="cycle-filter">
                 <SelectValue placeholder="Select a cycle" />

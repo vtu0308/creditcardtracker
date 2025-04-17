@@ -1,14 +1,26 @@
 "use client"
 
-import { useState } from "react"
-import { AddCardDialog } from "@/components/add-card-dialog"
-import { CardItem } from "@/components/card-item"
+import { useState, useEffect } from "react"
+import { storage, Card } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
-import { storage } from "@/lib/storage"
+import { AddCardDialog } from "@/components/add-card-dialog"
+import { CardItem } from "@/components/card-item"
 
 export default function CardsPage() {
   const [isAddCardOpen, setIsAddCardOpen] = useState(false)
+  const [cards, setCards] = useState<Card[]>([])
+
+  useEffect(() => {
+    const loadCards = () => {
+      setCards(storage.getCards())
+    }
+
+    loadCards()
+    // Subscribe to storage changes
+    window.addEventListener('storage-changed', loadCards)
+    return () => window.removeEventListener('storage-changed', loadCards)
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -16,7 +28,7 @@ export default function CardsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Cards</h1>
           <p className="text-muted-foreground">
-            Manage your credit cards and their statement cycles.
+            View and manage your credit cards
           </p>
         </div>
         <Button onClick={() => setIsAddCardOpen(true)}>
@@ -24,11 +36,19 @@ export default function CardsPage() {
           Add Card
         </Button>
       </div>
-      <div className="grid gap-4">
-        {storage.getCards().map((card) => (
-          <CardItem key={card.id} card={card} />
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {cards.map((card) => (
+          <CardItem 
+            key={card.id} 
+            card={card} 
+            onDelete={() => {
+              setCards(storage.getCards())
+            }}
+          />
         ))}
       </div>
+
       <AddCardDialog open={isAddCardOpen} onOpenChange={setIsAddCardOpen} />
     </div>
   )

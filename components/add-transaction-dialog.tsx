@@ -49,6 +49,9 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
             date: new Date(date).toISOString(),
           })
           
+          // Dispatch storage-changed event
+          window.dispatchEvent(new Event('storage-changed'))
+          
           setDescription("")
           setAmount("")
           setCurrency("VND")
