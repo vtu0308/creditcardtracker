@@ -13,15 +13,15 @@ export function CardList() {
   const [isAddCardOpen, setIsAddCardOpen] = useState(false)
 
   useEffect(() => {
-    const loadCards = () => {
-      setCards(storage.getCards())
-    }
-
-    loadCards()
-    // Subscribe to storage changes
-    window.addEventListener('storage-changed', loadCards)
-    return () => window.removeEventListener('storage-changed', loadCards)
-  }, [])
+    const loadCards = async () => {
+      const allCards = await storage.getCards();
+      setCards(allCards);
+    };
+  
+    loadCards();
+    window.addEventListener('storage-changed', loadCards);
+    return () => window.removeEventListener('storage-changed', loadCards);
+  }, []);
 
   return (
     <div className="space-y-4">

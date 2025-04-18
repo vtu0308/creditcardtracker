@@ -12,14 +12,15 @@ export default function CardsPage() {
   const [cards, setCards] = useState<Card[]>([])
 
   useEffect(() => {
-    const loadCards = () => {
-      setCards(storage.getCards())
-    }
+    const loadCards = async () => {
+      const cards = await storage.getCards();
+      setCards(cards);
+    };
 
-    loadCards()
+    loadCards();
     // Subscribe to storage changes
-    window.addEventListener('storage-changed', loadCards)
-    return () => window.removeEventListener('storage-changed', loadCards)
+    window.addEventListener('storage-changed', loadCards);
+    return () => window.removeEventListener('storage-changed', loadCards);
   }, [])
 
   return (
@@ -42,8 +43,9 @@ export default function CardsPage() {
           <CardItem 
             key={card.id} 
             card={card} 
-            onDelete={() => {
-              setCards(storage.getCards())
+            onDelete={async () => {
+              const cards = await storage.getCards();
+              setCards(cards);
             }}
           />
         ))}

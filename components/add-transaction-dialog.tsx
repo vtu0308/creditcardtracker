@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { storage, SupportedCurrency, isSupportedCurrency } from "@/lib/storage"
+import type { Card, Category } from "@/lib/storage"
 import { convertToVND } from "@/lib/currency"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -23,13 +24,23 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // NEW: State for cards and categories
+  const [cards, setCards] = useState<Card[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // NEW: Fetch cards and categories on mount
+  useEffect(() => {
+    storage.getCards().then(setCards);
+    storage.getCategories().then(setCategories);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (description && amount && cardId && categoryId && date && !isSubmitting) {
       setIsSubmitting(true)
       try {
-        const cards = storage.getCards()
-        const categories = storage.getCategories()
+        const cards = await storage.getCards()
+        const categories = await storage.getCategories()
         const card = cards.find(c => c.id === cardId)
         const category = categories.find(c => c.id === categoryId)
         
@@ -37,7 +48,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
           const numericAmount = parseFloat(amount)
           const vndAmount = await convertToVND(numericAmount, currency)
           
-          storage.addTransaction({
+          await storage.addTransaction({
             description,
             amount: numericAmount,
             currency,
@@ -127,7 +138,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                   <SelectValue placeholder="Select a card" />
                 </SelectTrigger>
                 <SelectContent>
-                  {storage.getCards().map((card) => (
+                  {cards.map((card) => (
                     <SelectItem key={card.id} value={card.id}>
                       {card.name}
                     </SelectItem>
@@ -142,7 +153,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {storage.getCategories().map((category) => (
+                  {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
                     </SelectItem>

@@ -38,297 +38,97 @@ export const isSupportedCurrency = (currency: string): currency is SupportedCurr
   return SUPPORTED_CURRENCIES.includes(currency as SupportedCurrency)
 }
 
-// Helper function to safely parse JSON from localStorage
-function getStorageItem<T>(key: string, defaultValue: T): T {
-  if (typeof window === "undefined") {
-    return defaultValue
-  }
+import { supabase } from './supabaseClient';
 
-  const stored = localStorage.getItem(key)
-  if (!stored) {
-    return defaultValue
-  }
-
-  try {
-    return JSON.parse(stored) as T
-  } catch (error) {
-    console.error(`Error parsing ${key} from localStorage:`, error)
-    return defaultValue
-  }
-}
-
-// Helper function to safely set JSON in localStorage
-function setStorageItem<T>(key: string, value: T): void {
-  if (typeof window === "undefined") {
-    return
-  }
-
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (error) {
-    console.error(`Error setting ${key} in localStorage:`, error)
-  }
-}
-
-// Storage keys
-const CARDS_KEY = "credit-tracker-cards"
-const CATEGORIES_KEY = "credit-tracker-categories"
-const TRANSACTIONS_KEY = "credit-tracker-transactions"
-
-// Default data
-const defaultCards: Card[] = [
-  {
-    id: "1",
-    name: "Visa Platinum",
-    statementDay: 15,
-    dueDay: 5,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    name: "Mastercard Gold",
-    statementDay: 20,
-    dueDay: 10,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-]
-
-const defaultCategories: Category[] = [
-  { id: "1", name: "Food", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: "2", name: "Food & Drink", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: "3", name: "Shopping", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: "4", name: "Transportation", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: "5", name: "Entertainment", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: "6", name: "Utilities", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-]
-
-const defaultTransactions: Transaction[] = [
-  {
-    id: "1",
-    date: new Date("2025-03-27").toISOString(),
-    description: "cider 2",
-    categoryId: "3",
-    categoryName: "Shopping",
-    amount: 50,
-    currency: "EUR",
-    vndAmount: 1500000, // 50 EUR ≈ 1.5M VND
-    cardId: "2",
-    cardName: "Mastercard Gold",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    date: new Date("2025-03-20").toISOString(),
-    description: "cider",
-    categoryId: "3",
-    categoryName: "Shopping",
-    amount: 50,
-    currency: "EUR",
-    vndAmount: 1500000, // 50 EUR ≈ 1.5M VND
-    cardId: "2",
-    cardName: "Mastercard Gold",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    date: new Date("2025-03-30").toISOString(),
-    description: "coffee",
-    categoryId: "2",
-    categoryName: "Food & Drink",
-    amount: 10,
-    currency: "EUR",
-    vndAmount: 292300, // 10 EUR ≈ 292.3K VND
-    cardId: "2",
-    cardName: "Mastercard Gold",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "4",
-    date: new Date("2025-04-14").toISOString(),
-    description: "coffee 2",
-    categoryId: "3",
-    categoryName: "Shopping",
-    amount: 2,
-    currency: "USD",
-    vndAmount: 51500, // 2 USD ≈ 51.5K VND
-    cardId: "2",
-    cardName: "Mastercard Gold",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "5",
-    date: new Date("2025-04-14").toISOString(),
-    description: "metro 2",
-    categoryId: "4",
-    categoryName: "Transportation",
-    amount: 2,
-    currency: "EUR",
-    vndAmount: 58000, // 2 EUR ≈ 58K VND
-    cardId: "2",
-    cardName: "Mastercard Gold",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-]
-
-// Storage service
 export const storage = {
   // Cards
-  getCards: () => getStorageItem<Card[]>(CARDS_KEY, defaultCards),
-  setCards: (cards: Card[]) => setStorageItem(CARDS_KEY, cards),
-  addCard: (card: Omit<Card, "id" | "createdAt" | "updatedAt">) => {
-    const cards = storage.getCards()
-    const newCard: Card = {
-      ...card,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    storage.setCards([...cards, newCard])
-    return newCard
+  async getCards(): Promise<Card[]> {
+    const { data, error } = await supabase.from('cards').select('*').order('createdAt', { ascending: true });
+    if (error) throw error;
+    return data || [];
   },
-  updateCard: (id: string, data: Partial<Omit<Card, "id" | "createdAt" | "updatedAt">>) => {
-    const cards = storage.getCards()
-    const updatedCards = cards.map((card) =>
-      card.id === id ? { ...card, ...data, updatedAt: new Date().toISOString() } : card,
-    )
-    storage.setCards(updatedCards)
+  async setCards(cards: Card[]): Promise<void> {
+    const { error } = await supabase.from('cards').upsert(cards, { onConflict: 'id' });
+    if (error) throw error;
   },
-  deleteCard: (id: string) => {
-    const cards = storage.getCards()
-    storage.setCards(cards.filter((card) => card.id !== id))
+  async addCard(card: Omit<Card, "id" | "createdAt" | "updatedAt">): Promise<Card> {
+    const now = new Date().toISOString();
+    const insert = { ...card, createdAt: now, updatedAt: now };
+    const { data, error } = await supabase.from('cards').insert([insert]).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateCard(id: string, data: Partial<Omit<Card, "id" | "createdAt" | "updatedAt">>): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('cards').update({ ...data, updatedAt: now }).eq('id', id);
+    if (error) throw error;
+  },
+  async deleteCard(id: string): Promise<void> {
+    const { error } = await supabase.from('cards').delete().eq('id', id);
+    if (error) throw error;
   },
 
   // Categories
-  getCategories: () => getStorageItem<Category[]>(CATEGORIES_KEY, defaultCategories),
-  setCategories: (categories: Category[]) => setStorageItem(CATEGORIES_KEY, categories),
-  addCategory: (name: string) => {
-    const categories = storage.getCategories()
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    storage.setCategories([...categories, newCategory])
-    return newCategory
+  async getCategories(): Promise<Category[]> {
+    const { data, error } = await supabase.from('categories').select('*').order('createdAt', { ascending: true });
+    if (error) throw error;
+    return data || [];
   },
-  updateCategory: (id: string, name: string) => {
-    const categories = storage.getCategories()
-    const updatedCategories = categories.map((category) =>
-      category.id === id ? { ...category, name, updatedAt: new Date().toISOString() } : category,
-    )
-    storage.setCategories(updatedCategories)
-
-    // Update category name in transactions
-    const transactions = storage.getTransactions()
-    const updatedTransactions = transactions.map((transaction) =>
-      transaction.categoryId === id
-        ? { ...transaction, categoryName: name, updatedAt: new Date().toISOString() }
-        : transaction,
-    )
-    storage.setTransactions(updatedTransactions)
+  async setCategories(categories: Category[]): Promise<void> {
+    const { error } = await supabase.from('categories').upsert(categories, { onConflict: 'id' });
+    if (error) throw error;
   },
-  deleteCategory: (id: string) => {
-    const categories = storage.getCategories()
-    storage.setCategories(categories.filter((category) => category.id !== id))
-
-    // Update transactions with this category to "Uncategorized"
-    const transactions = storage.getTransactions()
-    const updatedTransactions = transactions.map((transaction) =>
-      transaction.categoryId === id
-        ? {
-            ...transaction,
-            categoryId: "uncategorized",
-            categoryName: "Uncategorized",
-            updatedAt: new Date().toISOString(),
-          }
-        : transaction,
-    )
-    storage.setTransactions(updatedTransactions)
+  async addCategory(name: string): Promise<Category> {
+    const now = new Date().toISOString();
+    const insert = { name, createdAt: now, updatedAt: now };
+    const { data, error } = await supabase.from('categories').insert([insert]).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateCategory(id: string, name: string): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('categories').update({ name, updatedAt: now }).eq('id', id);
+    if (error) throw error;
+  },
+  async deleteCategory(id: string): Promise<void> {
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    if (error) throw error;
   },
 
   // Transactions
-  getTransactions: () => getStorageItem<Transaction[]>(TRANSACTIONS_KEY, defaultTransactions),
-  setTransactions: (transactions: Transaction[]) => setStorageItem(TRANSACTIONS_KEY, transactions),
-  addTransaction: (transaction: Omit<Transaction, "id" | "createdAt" | "updatedAt">) => {
-    const transactions = storage.getTransactions()
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    storage.setTransactions([newTransaction, ...transactions])
-    return newTransaction
+  async getTransactions(): Promise<Transaction[]> {
+    const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+    if (error) throw error;
+    return data || [];
   },
-  updateTransaction: (id: string, data: Partial<Omit<Transaction, "id" | "createdAt" | "updatedAt">>) => {
-    const transactions = storage.getTransactions()
-    const updatedTransactions = transactions.map((transaction) =>
-      transaction.id === id ? { ...transaction, ...data, updatedAt: new Date().toISOString() } : transaction,
-    )
-    storage.setTransactions(updatedTransactions)
+  async setTransactions(transactions: Transaction[]): Promise<void> {
+    const { error } = await supabase.from('transactions').upsert(transactions, { onConflict: 'id' });
+    if (error) throw error;
   },
-  deleteTransaction: (id: string) => {
-    const transactions = storage.getTransactions()
-    storage.setTransactions(transactions.filter((transaction) => transaction.id !== id))
+  async addTransaction(transaction: Omit<Transaction, "id" | "createdAt" | "updatedAt">): Promise<Transaction> {
+    const now = new Date().toISOString();
+    const insert = { ...transaction, createdAt: now, updatedAt: now };
+    const { data, error } = await supabase.from('transactions').insert([insert]).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateTransaction(id: string, data: Partial<Omit<Transaction, "id" | "createdAt" | "updatedAt">>): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('transactions').update({ ...data, updatedAt: now }).eq('id', id);
+    if (error) throw error;
+  },
+  async deleteTransaction(id: string): Promise<void> {
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    if (error) throw error;
   },
 
   // Helpers
-  getCardBalance: (cardId: string) => {
-    const transactions = storage.getTransactions()
-    return transactions.filter((t) => t.cardId === cardId).reduce((sum, t) => sum + t.vndAmount, 0)
-  },
+  async getCardBalance(cardId: string): Promise<number> {
+    const { data, error } = await supabase.from('transactions').select('vndAmount').eq('cardId', cardId);
+    if (error) throw error;
+    return (data || []).reduce((sum: number, t: { vndAmount: number }) => sum + (t.vndAmount || 0), 0);
+  }
+};
 
-  // Initialize storage with default values if empty
-  initialize: () => {
-    if (typeof window === "undefined") {
-      return
-    }
 
-    const existingTransactions = storage.getTransactions()
-    const existingCards = storage.getCards()
-    const existingCategories = storage.getCategories()
-
-    if (existingTransactions.length === 0) {
-      storage.setTransactions(defaultTransactions)
-    }
-
-    if (existingCards.length === 0) {
-      storage.setCards(defaultCards)
-    }
-
-    if (existingCategories.length === 0) {
-      storage.setCategories(defaultCategories)
-    }
-
-    // Dispatch event to notify components
-    window.dispatchEvent(new Event('storage-changed'))
-  },
-
-  initializeDefaultCategories: () => {
-    const defaultCategories = [
-      { id: 'food', name: 'Food & Dining', color: '#FF6B6B' },
-      { id: 'shopping', name: 'Shopping', color: '#4ECDC4' },
-      { id: 'transport', name: 'Transportation', color: '#45B7D1' },
-      { id: 'utilities', name: 'Bills & Utilities', color: '#96CEB4' },
-      { id: 'entertainment', name: 'Entertainment', color: '#FFEEAD' },
-      { id: 'health', name: 'Health & Wellness', color: '#D4A5A5' },
-      { id: 'education', name: 'Education', color: '#9B9B9B' },
-      { id: 'other', name: 'Other', color: '#A8A8A8' }
-    ];
-
-    const existingCategories = storage.getCategories();
-    if (existingCategories.length === 0) {
-      defaultCategories.forEach(category => {
-        storage.addCategory(category.name);
-      });
-    }
-  },
-}
+export default storage;

@@ -15,16 +15,18 @@ interface CardItemProps {
 
 export function CardItem({ card, onDelete }: CardItemProps) {
   const [isEditOpen, setIsEditOpen] = useState(false)
-  const [balance, setBalance] = useState(() => storage.getCardBalance(card.id))
+  const [balance, setBalance] = useState<number>(0);
 
   useEffect(() => {
-    const updateBalance = () => {
-      setBalance(storage.getCardBalance(card.id))
-    }
+    const updateBalance = async () => {
+      const bal = await storage.getCardBalance(card.id);
+      setBalance(bal);
+    };
 
-    window.addEventListener('storage-changed', updateBalance)
-    return () => window.removeEventListener('storage-changed', updateBalance)
-  }, [card.id])
+    updateBalance();
+    window.addEventListener('storage-changed', updateBalance);
+    return () => window.removeEventListener('storage-changed', updateBalance);
+  }, [card.id]);
 
   return (
     <>

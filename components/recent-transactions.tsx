@@ -12,15 +12,15 @@ export function RecentTransactions() {
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
 
   useEffect(() => {
-    const loadTransactions = () => {
-      setTransactions(storage.getTransactions().slice(0, 5)) // Show only 5 most recent transactions
-    }
+    const loadTransactions = async () => {
+      const allTransactions = await storage.getTransactions();
+      setTransactions(allTransactions.slice(0, 5)); // Show only 5 most recent transactions
+    };
 
-    loadTransactions()
-    // Subscribe to storage changes
-    window.addEventListener('storage-changed', loadTransactions)
-    return () => window.removeEventListener('storage-changed', loadTransactions)
-  }, [])
+    loadTransactions();
+    window.addEventListener('storage-changed', loadTransactions);
+    return () => window.removeEventListener('storage-changed', loadTransactions);
+  }, []);
 
   return (
     <div className="space-y-4">

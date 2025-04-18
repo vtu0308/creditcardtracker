@@ -4,32 +4,41 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-// For now, use localStorage-based storage logic for categories
-function getCategories() {
-  if (typeof window === "undefined") return [];
-  return JSON.parse(localStorage.getItem("categories") || "[]");
-}
-function saveCategories(categories: { id: string; name: string }[]) {
-  localStorage.setItem("categories", JSON.stringify(categories));
-}
+import { storage } from "@/lib/storage";
 
 export default function SettingsPage() {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setCategories(getCategories());
+    async function fetchCategories() {
+      setLoading(true);
+      setError(null);
+      try {
+        const cats = await storage.getCategories();
+        setCategories(cats);
+      } catch (err: any) {
+        setError("Failed to load categories");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCategories();
   }, []);
 
-  function handleAddCategory() {
+  async function handleAddCategory() {
     if (!newCategory.trim()) return;
-    const newCat = { id: Date.now().toString(), name: newCategory.trim() };
-    const updated = [...categories, newCat];
-    setCategories(updated);
-    saveCategories(updated);
-    setNewCategory("");
+    try {
+      const cat = await storage.addCategory(newCategory.trim());
+      setCategories((prev) => [...prev, cat]);
+      setNewCategory("");
+    } catch (err) {
+      setError("Failed to add category");
+    }
   }
 
   function handleEditCategory(id: string) {
@@ -37,20 +46,24 @@ export default function SettingsPage() {
     setEditingName(categories.find((cat) => cat.id === id)?.name || "");
   }
 
-  function handleSaveEdit(id: string) {
-    const updated = categories.map((cat) =>
-      cat.id === id ? { ...cat, name: editingName } : cat
-    );
-    setCategories(updated);
-    saveCategories(updated);
-    setEditingId(null);
-    setEditingName("");
+  async function handleSaveEdit(id: string) {
+    try {
+      const updated = await storage.updateCategory(id, editingName);
+      setCategories((prev) => prev.map((cat) => cat.id === id ? updated : cat));
+      setEditingId(null);
+      setEditingName("");
+    } catch (err) {
+      setError("Failed to update category");
+    }
   }
 
-  function handleDeleteCategory(id: string) {
-    const updated = categories.filter((cat) => cat.id !== id);
-    setCategories(updated);
-    saveCategories(updated);
+  async function handleDeleteCategory(id: string) {
+    try {
+      await storage.deleteCategory(id);
+      setCategories((prev) => prev.filter((cat) => cat.id !== id));
+    } catch (err) {
+      setError("Failed to delete category");
+    }
   }
 
   return (

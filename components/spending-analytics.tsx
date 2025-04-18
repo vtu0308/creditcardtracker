@@ -24,14 +24,14 @@ export function SpendingAnalytics({ className }: SpendingAnalyticsProps) {
 
   // Load initial cards data
   useEffect(() => {
-    const loadCards = () => {
-      const allCards = storage.getCards()
-      setCards(allCards)
-    }
+    const loadCards = async () => {
+      const allCards = await storage.getCards();
+      setCards(allCards);
+    };
 
-    loadCards()
-    window.addEventListener('storage-changed', loadCards)
-    return () => window.removeEventListener('storage-changed', loadCards)
+    loadCards();
+    window.addEventListener('storage-changed', loadCards);
+    return () => window.removeEventListener('storage-changed', loadCards);
   }, [])
 
   // Generate cycles based on statement day
@@ -130,46 +130,36 @@ export function SpendingAnalytics({ className }: SpendingAnalyticsProps) {
 
   // Calculate total spending
   useEffect(() => {
-    const calculateTotal = () => {
-      if (!selectedCycle) return
-
+    const calculateTotal = async () => {
+      if (!selectedCycle) return;
       try {
-        const transactions = storage.getTransactions()
-        const cycleData = JSON.parse(selectedCycle)
-        const startDate = new Date(cycleData.start)
-        const endDate = new Date(cycleData.end)
-
-        // Ensure dates are at the start/end of the day
-        startDate.setHours(0, 0, 0, 0)
-        endDate.setHours(23, 59, 59, 999)
-
+        const transactions = await storage.getTransactions();
+        const cycleData = JSON.parse(selectedCycle);
+        const startDate = new Date(cycleData.start);
+        const endDate = new Date(cycleData.end);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
         const filteredTransactions = transactions.filter(transaction => {
-          const transactionDate = new Date(transaction.date)
-          transactionDate.setHours(0, 0, 0, 0)  // Normalize transaction date
-          
-          const isInDateRange = transactionDate >= startDate && transactionDate <= endDate
-          const matchesCard = selectedCard === "all" || transaction.cardId === selectedCard
-          
-          return isInDateRange && matchesCard
-        })
-
+          const transactionDate = new Date(transaction.date);
+          transactionDate.setHours(0, 0, 0, 0);
+          const isInDateRange = transactionDate >= startDate && transactionDate <= endDate;
+          const matchesCard = selectedCard === "all" || transaction.cardId === selectedCard;
+          return isInDateRange && matchesCard;
+        });
         const total = filteredTransactions.reduce((sum, t) => {
-          // Ensure we're working with numbers
-          const amount = typeof t.vndAmount === 'number' ? t.vndAmount : 0
-          return sum + amount
-        }, 0)
-
-        setTotalSpending(total)
+          const amount = typeof t.vndAmount === 'number' ? t.vndAmount : 0;
+          return sum + amount;
+        }, 0);
+        setTotalSpending(total);
       } catch (error) {
-        console.error('Error calculating total spending:', error)
-        setTotalSpending(0)
+        console.error('Error calculating total spending:', error);
+        setTotalSpending(0);
       }
-    }
-
-    calculateTotal()
-    window.addEventListener('storage-changed', calculateTotal)
-    return () => window.removeEventListener('storage-changed', calculateTotal)
-  }, [selectedCard, selectedCycle])
+    };
+    calculateTotal();
+    window.addEventListener('storage-changed', calculateTotal);
+    return () => window.removeEventListener('storage-changed', calculateTotal);
+  }, [selectedCard, selectedCycle]);
 
   return (
     <Card className={className}>

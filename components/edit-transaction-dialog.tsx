@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { storage, SupportedCurrency, isSupportedCurrency, Transaction } from "@/lib/storage"
+import { storage, SupportedCurrency, isSupportedCurrency, Transaction, Card, Category } from "@/lib/storage"
 import { convertToVND } from "@/lib/currency"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -17,6 +17,19 @@ interface EditTransactionDialogProps {
 }
 
 export function EditTransactionDialog({ transaction, open, onOpenChange, onDelete }: EditTransactionDialogProps) {
+  const [cards, setCards] = useState<Card[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const allCards = await storage.getCards();
+      setCards(allCards);
+      const allCategories = await storage.getCategories();
+      setCategories(allCategories);
+    }
+    fetchData();
+  }, []);
+
   const [description, setDescription] = useState("")
   const [amount, setAmount] = useState("")
   const [currency, setCurrency] = useState<SupportedCurrency>("VND")
@@ -43,8 +56,6 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
     if (description && amount && cardId && categoryId && date && !isSubmitting && transaction) {
       setIsSubmitting(true)
       try {
-        const cards = storage.getCards()
-        const categories = storage.getCategories()
         const card = cards.find(c => c.id === cardId)
         const category = categories.find(c => c.id === categoryId)
         
@@ -146,12 +157,12 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
                     <SelectValue placeholder="Select a card" />
                   </SelectTrigger>
                   <SelectContent>
-                    {storage.getCards().map((card) => (
-                      <SelectItem key={card.id} value={card.id}>
-                        {card.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+  {cards.map((card) => (
+    <SelectItem key={card.id} value={card.id}>
+      {card.name}
+    </SelectItem>
+  ))}
+</SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
@@ -161,12 +172,12 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {storage.getCategories().map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+  {categories.map((category) => (
+    <SelectItem key={category.id} value={category.id}>
+      {category.name}
+    </SelectItem>
+  ))}
+</SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">

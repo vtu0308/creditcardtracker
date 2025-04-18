@@ -17,40 +17,46 @@ export default function CategoriesPage() {
 
   // Load categories from storage on component mount
   useEffect(() => {
-    storage.initialize()
-    setCategories(storage.getCategories())
-  }, [])
-
-  const handleAddCategory = () => {
-    if (newCategory.trim()) {
-      storage.addCategory(newCategory.trim())
-      setCategories(storage.getCategories())
-      setNewCategory("")
+    async function fetchCategories() {
+      const cats = await storage.getCategories();
+      setCategories(cats);
     }
-  }
+    fetchCategories();
+  }, []);
+
+  const handleAddCategory = async () => {
+    if (newCategory.trim()) {
+      await storage.addCategory(newCategory.trim());
+      const cats = await storage.getCategories();
+      setCategories(cats);
+      setNewCategory("");
+    }
+  };
 
   const startEditing = (category: Category) => {
-    setEditingId(category.id)
-    setEditName(category.name)
-  }
+    setEditingId(category.id);
+    setEditName(category.name);
+  };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editingId && editName.trim()) {
-      storage.updateCategory(editingId, editName.trim())
-      setCategories(storage.getCategories())
-      setEditingId(null)
-      setEditName("")
+      await storage.updateCategory(editingId, editName.trim());
+      const cats = await storage.getCategories();
+      setCategories(cats);
+      setEditingId(null);
+      setEditName("");
     }
-  }
+  };
 
   const cancelEdit = () => {
-    setEditingId(null)
-    setEditName("")
-  }
+    setEditingId(null);
+    setEditName("");
+  };
 
-  const deleteCategory = (id: string) => {
-    storage.deleteCategory(id)
-    setCategories(storage.getCategories())
+  const deleteCategory = async (id: string) => {
+    await storage.deleteCategory(id);
+    const cats = await storage.getCategories();
+    setCategories(cats);
   }
 
   return (

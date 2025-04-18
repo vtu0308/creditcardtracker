@@ -36,45 +36,40 @@ const CATEGORY_COLORS = [
 ]
 
 export function DashboardMetrics() {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("30D")
-  const [isLoading, setIsLoading] = useState(true)
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("30D");
+  const [isLoading, setIsLoading] = useState(true);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   useEffect(() => {
-    // Initialize storage if needed
-    storage.initialize()
-    setIsLoading(false)
-  }, [])
+    async function fetchTransactions() {
+      setIsLoading(true);
+      const txns = await storage.getTransactions();
+      setTransactions(txns);
+      setIsLoading(false);
+    }
+    fetchTransactions();
+  }, []);
 
   // Calculate category totals based on selected time period
   const categoryTotals = useMemo(() => {
-    if (isLoading) return []
-    
-    const transactions = storage.getTransactions()
-    console.log('Current transactions:', transactions)
-    
-    const days = TIME_PERIODS[timePeriod]
-    const cutoffDate = days ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : new Date(0)
-    
-    const totals: { [key: string]: number } = {}
-    
+    if (isLoading) return [];
+    const days = TIME_PERIODS[timePeriod];
+    const cutoffDate = days ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : new Date(0);
+    const totals: { [key: string]: number } = {};
     transactions.forEach(transaction => {
       if (new Date(transaction.date) >= cutoffDate) {
-        const categoryName = transaction.categoryName
-        totals[categoryName] = (totals[categoryName] || 0) + (transaction.vndAmount || transaction.amount)
+        const categoryName = transaction.categoryName;
+        totals[categoryName] = (totals[categoryName] || 0) + (transaction.vndAmount || transaction.amount);
       }
-    })
-
-    console.log('Category totals:', totals)
-
-    // Convert to array format for the pie chart
+    });
     return Object.entries(totals)
       .map(([name, value], index) => ({
         name,
         value,
         color: CATEGORY_COLORS[index % CATEGORY_COLORS.length]
       }))
-      .sort((a, b) => b.value - a.value) // Sort by value descending
-  }, [timePeriod, isLoading])
+      .sort((a, b) => b.value - a.value); // Sort by value descending
+  }, [timePeriod, isLoading, transactions]);
 
   const totalSpending = useMemo(() => {
     return categoryTotals.reduce((sum, category) => sum + category.value, 0)
