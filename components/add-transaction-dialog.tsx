@@ -67,13 +67,35 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
 
       if (card && category) {
         const numericAmount = parseFloat(amount);
-        // Add validation for numericAmount if needed (e.g., isNaN)
         if (isNaN(numericAmount)) {
-           throw new Error("Invalid amount entered.");
+           console.error('[AddTransactionDialog] Invalid numericAmount:', amount);
+           setSubmitError("Invalid amount entered.");
+           setIsSubmitting(false);
+           return;
         }
-
-        const vndAmount = await convertToVND(numericAmount, currency);
-
+        let vndAmount: number;
+        // --- Log inputs RIGHT BEFORE conversion ---
+        console.log('[AddTransactionDialog] Inputs before conversion:', { numericAmount, currency });
+        if (currency === 'VND') {
+            console.log('[AddTransactionDialog] Currency is VND, setting vndAmount directly.');
+            vndAmount = numericAmount;
+        } else {
+            // --- Wrap the specific call ---
+            console.log('[AddTransactionDialog] Attempting to call convertToVND...');
+            try {
+                vndAmount = await convertToVND(numericAmount, currency);
+                // --- Log the result AFTER successful conversion ---
+                console.log('[AddTransactionDialog] convertToVND call succeeded. Result:', vndAmount);
+            } catch (conversionError) {
+                console.error('[AddTransactionDialog] ERROR during convertToVND call:', conversionError);
+                setSubmitError(`Currency conversion failed: ${conversionError instanceof Error ? conversionError.message : 'Unknown error'}`);
+                setIsSubmitting(false);
+                return;
+            }
+        }
+        // --- Log the final vndAmount to be saved ---
+        console.log('[AddTransactionDialog] Final vndAmount to be saved:', vndAmount);
+        // --- Proceed to add transaction ---
         console.log('[AddTransactionDialog] Calling storage.addTransaction...');
         await storage.addTransaction({
           description,

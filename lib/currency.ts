@@ -14,6 +14,18 @@ interface ExchangeRateResponse {
   }
 }
 
+interface PairResponse {
+  result: string;
+  documentation: string;
+  terms_of_use: string;
+  time_last_update_unix: number;
+  time_next_update_unix: number;
+  base_code: string;
+  target_code: string;
+  conversion_rate: number;
+  conversion_result: number;
+}
+
 let rateCache: {
   rates: { [key: string]: number }
   timestamp: number
@@ -22,43 +34,36 @@ let rateCache: {
 const CACHE_DURATION = 1000 * 60 * 60 // 1 hour
 
 export async function convertToVND(amount: number, fromCurrency: SupportedCurrency): Promise<number> {
+  console.log(`Converting ${amount} ${fromCurrency} to VND`)
+
   if (fromCurrency === 'VND') {
+    console.log('No conversion needed, returning original amount')
     return amount
   }
-
-  // Check cache first
-  if (rateCache && Date.now() - rateCache.timestamp < CACHE_DURATION) {
-    const rate = rateCache.rates[fromCurrency]
-    if (rate) {
-      return Math.round(amount * rate)
-    }
+  if (isNaN(amount) || amount === 0) {
+    console.log('[convertToVND] Returning 0 for NaN or 0 amount.');
+    return 0;
   }
 
   try {
     // Use the ExchangeRate-API with your API key
-    const response = await fetch(
-      `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/${fromCurrency}`
-    )
-    
+    const url = `https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${fromCurrency}/VND/${amount}`
+    console.log(`Fetching exchange rate from ${url}`)
+
+    const response = await fetch(url)
+    console.log(`Received response with status ${response.status}`)
+
     if (!response.ok) {
       throw new Error('Failed to fetch exchange rates')
     }
 
-    const data: ExchangeRateResponse = await response.json()
-    
-    // Cache the new rates
-    rateCache = {
-      rates: data.conversion_rates,
-      timestamp: Date.now()
-    }
+    const data: PairResponse = await response.json()
+    console.log(`Received API response: ${JSON.stringify(data)}`)
 
-    // Get the VND rate and convert
-    const vndRate = data.conversion_rates['VND']
-    if (!vndRate) {
-      throw new Error('VND rate not found in response')
-    }
+    const conversionResult = data.conversion_result
+    console.log(`Extracted conversion result: ${conversionResult}`)
 
-    return Math.round(amount * vndRate)
+    return conversionResult
   } catch (error) {
     console.error('Error converting currency:', error)
     // Fallback rates (as of April 2024)
