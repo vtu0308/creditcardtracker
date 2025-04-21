@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Trash2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast";
 
 interface EditCardDialogProps {
   card: CardType | null
@@ -18,6 +19,7 @@ interface EditCardDialogProps {
 }
 
 export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardDialogProps) {
+  const { toast } = useToast();
   const queryClient = useQueryClient(); // Get query client instance
   const [name, setName] = useState("")
   const [statementDay, setStatementDay] = useState("")
@@ -68,11 +70,20 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
       console.log('[EditCardDialog] Query invalidated.');
 
       // REMOVED: window.dispatchEvent(new Event('storage-changed'))
+      toast({
+        title: "Card Updated",
+        description: `Card \"${name}\" updated successfully.`,
+      });
       onOpenChange?.(false); // Close dialog on success
 
     } catch (error) {
         console.error('Error updating card:', error);
         setSubmitError(error instanceof Error ? error.message : 'Failed to save changes.');
+        toast({
+          variant: "destructive",
+          title: "Error Updating Card",
+          description: error instanceof Error ? error.message : 'Failed to save changes.',
+        });
     } finally {
         setIsSubmitting(false);
     }
@@ -99,16 +110,22 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
         queryClient.invalidateQueries({ queryKey: ['transactions'] });
         console.log('[EditCardDialog] Queries invalidated after delete.');
 
-
-        // REMOVED: window.dispatchEvent(new Event('storage-changed'))
-
+        toast({
+          title: "Card Deleted",
+          description: `Card deleted successfully.`,
+        });
         setShowDeleteAlert(false); // Close confirmation
-        onOpenChange?.(false); // Close main dialog
         onDelete?.(); // Optional callback
+        onOpenChange?.(false); // Close main dialog
 
     } catch(error) {
         console.error('Error deleting card:', error);
         setSubmitError(error instanceof Error ? error.message : 'Failed to delete card.');
+        toast({
+          variant: "destructive",
+          title: "Error Deleting Card",
+          description: error instanceof Error ? error.message : 'Failed to delete card.',
+        });
         setShowDeleteAlert(false); // Close alert even on error to show message
     } finally {
         setIsDeleting(false);

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast";
 
 interface AddTransactionDialogProps {
   open?: boolean
@@ -16,6 +17,7 @@ interface AddTransactionDialogProps {
 }
 
 export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialogProps) {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [description, setDescription] = useState("")
   const [amount, setAmount] = useState("")
@@ -115,6 +117,11 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
         queryClient.invalidateQueries({ queryKey: ['transactions'] });
         console.log('[AddTransactionDialog] Query invalidated.');
 
+        toast({
+          title: "Transaction Added",
+          description: `Transaction \"${description}\" added successfully.`,
+        });
+
         // --- Reset form and close dialog on success ---
         setDescription("");
         setAmount("");
@@ -131,6 +138,11 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
     } catch (error) {
       console.error('Error adding transaction:', error);
       setSubmitError(error instanceof Error ? error.message : 'An unexpected error occurred.'); // Show error to user
+      toast({
+        variant: "destructive",
+        title: "Error Adding Transaction",
+        description: error instanceof Error ? error.message : 'Failed to add transaction.',
+      });
     } finally {
       setIsSubmitting(false);
     }

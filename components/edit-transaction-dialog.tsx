@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Trash2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast";
 
 interface EditTransactionDialogProps {
   transaction: Transaction | null
@@ -20,6 +21,7 @@ interface EditTransactionDialogProps {
 }
 
 export function EditTransactionDialog({ transaction, open, onOpenChange, onDelete }: EditTransactionDialogProps) {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // --- State for form fields (initialized by useEffect below) ---
@@ -89,7 +91,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
       const card = cards.find(c => c.id === cardId);
       const category = categories.find(c => c.id === categoryId);
 
-      if (card && category) {
+      if (card && category && transaction) {
         const numericAmount = parseFloat(amount);
         if (isNaN(numericAmount)) {
           throw new Error("Invalid amount entered.");
@@ -99,14 +101,11 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
         console.log('[EditTransactionDialog] Calling storage.updateTransaction...');
         await storage.updateTransaction(transaction.id, {
           description,
-          amount: numericAmount,
-          currency,
-          vndAmount,
+          amount: vndAmount,
+          currency: "VND",
           cardId,
-          cardName: card.name,
           categoryId,
-          categoryName: category.name,
-          date: new Date(date).toISOString(),
+          date,
         });
         console.log('[EditTransactionDialog] storage.updateTransaction succeeded.');
 
@@ -115,6 +114,10 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
         queryClient.invalidateQueries({ queryKey: ['transactions'] });
         console.log('[EditTransactionDialog] Query invalidated.');
 
+        toast({
+          title: "Transaction Updated",
+          description: `Transaction \"${description}\" updated successfully.`,
+        });
         onOpenChange?.(false); // Close dialog on success
 
       } else {
@@ -122,7 +125,12 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
       }
     } catch (error) {
       console.error('Error updating transaction:', error);
-      setSubmitError(error instanceof Error ? error.message : 'An unexpected error occurred while saving.');
+      setSubmitError(error instanceof Error ? error.message : 'Failed to save changes.');
+      toast({
+        variant: "destructive",
+        title: "Error Updating Transaction",
+        description: error instanceof Error ? error.message : 'Failed to save changes.',
+      });
     } finally {
       setIsSubmitting(false);
     }

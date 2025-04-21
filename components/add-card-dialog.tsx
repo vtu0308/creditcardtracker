@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast";
 
 interface AddCardDialogProps {
   open?: boolean
@@ -14,6 +15,7 @@ interface AddCardDialogProps {
 }
 
 export function AddCardDialog({ open, onOpenChange }: AddCardDialogProps) {
+  const { toast } = useToast();
   const queryClient = useQueryClient(); // Get query client instance
   const [name, setName] = useState("")
   const [statementDay, setStatementDay] = useState("")
@@ -52,6 +54,10 @@ export function AddCardDialog({ open, onOpenChange }: AddCardDialogProps) {
 
       // REMOVED: window.dispatchEvent(new Event('storage-changed'))
 
+      toast({
+        title: "Card Added",
+        description: `Card \"${name}\" added successfully.`,
+      });
       // Reset form and close dialog on success
       setName("");
       setStatementDay("");
@@ -61,6 +67,11 @@ export function AddCardDialog({ open, onOpenChange }: AddCardDialogProps) {
     } catch (error) {
         console.error('Error adding card:', error);
         setSubmitError(error instanceof Error ? error.message : 'Failed to add card.');
+        toast({
+          variant: "destructive",
+          title: "Error Adding Card",
+          description: error instanceof Error ? error.message : 'Failed to add card.',
+        });
     } finally {
         setIsSubmitting(false);
     }

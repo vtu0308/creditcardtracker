@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans } from "next/font/google"
 import { ReactQueryProvider } from "../components/react-query-provider";
 import { MainNav } from "@/components/main-nav"
 import { ClientLayout } from "./client-layout"
+import { Toaster } from "@/components/ui/toaster"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -32,6 +33,7 @@ export default function RootLayout({
               </div>
             </main>
           </ClientLayout>
+          <Toaster />
         </body>
       </html>
     </ReactQueryProvider>
