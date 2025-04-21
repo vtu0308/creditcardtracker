@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useQueryClient } from '@tanstack/react-query'
 import { Transaction, SupportedCurrency } from "@/lib/storage"
 import { formatCurrency } from "@/lib/currency"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,6 +15,13 @@ interface TransactionItemProps {
 }
 
 export function TransactionItem({ transaction, onDelete }: TransactionItemProps) {
+  const queryClient = useQueryClient();
+
+  // Handler to invalidate cache after deletion
+  const handleDelete = () => {
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    if (onDelete) onDelete();
+  }
   const [isEditOpen, setIsEditOpen] = useState(false)
   const showBothAmounts = transaction.currency !== "VND"
   const vndAmount = transaction.vndAmount || 0
@@ -60,7 +68,7 @@ export function TransactionItem({ transaction, onDelete }: TransactionItemProps)
         transaction={transaction}
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
-        onDelete={onDelete}
+        onDelete={handleDelete}
       />
     </>
   )
