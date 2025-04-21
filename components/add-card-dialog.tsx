@@ -62,7 +62,10 @@ export function AddCardDialog({ open, onOpenChange }: AddCardDialogProps) {
       setName("");
       setStatementDay("");
       setDueDay("");
-      onOpenChange?.(false);
+      if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    onOpenChange?.(false);
 
     } catch (error) {
         console.error('Error adding card:', error);

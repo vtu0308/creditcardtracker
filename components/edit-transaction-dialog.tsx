@@ -118,7 +118,10 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
           title: "Transaction Updated",
           description: `Transaction \"${description}\" updated successfully.`,
         });
-        onOpenChange?.(false); // Close dialog on success
+        if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onOpenChange?.(false); // Close dialog on success
 
       } else {
         throw new Error("Selected card or category could not be found. Data might be loading or missing.");

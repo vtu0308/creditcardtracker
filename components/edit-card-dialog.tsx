@@ -74,7 +74,10 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
         title: "Card Updated",
         description: `Card \"${name}\" updated successfully.`,
       });
-      onOpenChange?.(false); // Close dialog on success
+      if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    onOpenChange?.(false); // Close dialog on success
 
     } catch (error) {
         console.error('Error updating card:', error);

@@ -129,6 +129,9 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
         setCardId("");
         setCategoryId("");
         setDate(new Date().toISOString().split("T")[0]);
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
         onOpenChange?.(false); // Close the dialog
 
       } else {
