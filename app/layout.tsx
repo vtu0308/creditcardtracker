@@ -1,13 +1,15 @@
 import type { Metadata } from "next"
-import { Atkinson_Hyperlegible } from "next/font/google"
 import "./globals.css"
+import { Plus_Jakarta_Sans } from "next/font/google"
+import { ReactQueryProvider } from "../components/react-query-provider";
 import { MainNav } from "@/components/main-nav"
-import { RootLayoutClient } from "./client-layout"
+import { ClientLayout } from "./client-layout"
+import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from "@/components/providers/auth-provider";
 
-const atkinson = Atkinson_Hyperlegible({
-  weight: ['400', '700'],
-  subsets: ['latin'],
-  display: 'swap',
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
 })
 
 export const metadata: Metadata = {
@@ -21,19 +23,23 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className={`${atkinson.className} h-full`}>
-        <RootLayoutClient>
-          <div className="min-h-full bg-[#F5E3E0]">
-            <MainNav />
-            <div className="py-6">
-              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                {children}
-              </div>
-            </div>
-          </div>
-        </RootLayoutClient>
-      </body>
-    </html>
+    <ReactQueryProvider>
+      <AuthProvider>
+        <html lang="en" suppressHydrationWarning>
+          <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
+            <ClientLayout>
+              <MainNav />
+              <main className="py-4 sm:py-6">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  {children}
+                </div>
+              </main>
+            </ClientLayout>
+            <Toaster />
+          </body>
+        </html>
+        <Toaster />
+      </AuthProvider>
+    </ReactQueryProvider>
   )
 }

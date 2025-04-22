@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react';
 import { Transaction, storage } from "@/lib/storage"
 import { AddTransactionDialog } from "@/components/add-transaction-dialog"
 import { TransactionItem } from "@/components/transaction-item"
@@ -8,19 +9,12 @@ import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
 
 export function RecentTransactions() {
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
-
-  useEffect(() => {
-    const loadTransactions = () => {
-      setTransactions(storage.getTransactions().slice(0, 5)) // Show only 5 most recent transactions
-    }
-
-    loadTransactions()
-    // Subscribe to storage changes
-    window.addEventListener('storage-changed', loadTransactions)
-    return () => window.removeEventListener('storage-changed', loadTransactions)
-  }, [])
+  const { data: transactions = [] } = useQuery<Transaction[]>({
+    queryKey: ['transactions'],
+    queryFn: storage.getTransactions,
+    initialData: [],
+  });
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -32,7 +26,7 @@ export function RecentTransactions() {
         </Button>
       </div>
       <div className="grid gap-4">
-        {transactions.map((transaction) => (
+        {(transactions.slice(0, 5)).map((transaction) => (
           <TransactionItem key={transaction.id} transaction={transaction} />
         ))}
       </div>
