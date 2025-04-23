@@ -12,7 +12,50 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { ProtectedRoute } from "@/components/auth/protected-route";
+
 export default function TransactionsPage() {
+  return (
+    <ProtectedRoute>
+      <TransactionsContent />
+    </ProtectedRoute>
+  );
+}
+
+// --- Utility: Group transactions by date and label (Today, Yesterday, Date) ---
+function groupTransactionsByDate(transactions: Transaction[], now: Date) {
+  // Helper: Format date as YYYY-MM-DD
+  const formatYMD = (date: Date) => date.toISOString().split('T')[0];
+  // Helper: Format for header (e.g., April 21, 2025)
+  const formatHeader = (date: Date) => date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Get today and yesterday as YYYY-MM-DD
+  const todayYMD = formatYMD(now);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayYMD = formatYMD(yesterday);
+
+  // Group transactions by date string
+  const groups: Record<string, Transaction[]> = {};
+  transactions.forEach(tx => {
+    const txYMD = formatYMD(new Date(tx.date));
+    if (!groups[txYMD]) groups[txYMD] = [];
+    groups[txYMD].push(tx);
+  });
+
+  // Sort date keys descending (most recent first)
+  const sortedKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  // Map to array with label
+  return sortedKeys.map(dateYMD => {
+    let label = formatHeader(new Date(dateYMD));
+    if (dateYMD === todayYMD) label = 'Today';
+    else if (dateYMD === yesterdayYMD) label = 'Yesterday';
+    return { label, transactions: groups[dateYMD] };
+  });
+}
+
+function TransactionsContent() {
   // --- State for UI controls ---
   const [searchQuery, setSearchQuery] = useState(''); // Added back
   const [selectedCard, setSelectedCard] = useState<string>('');
@@ -193,10 +236,19 @@ export default function TransactionsPage() {
              <Input id="filter-search" placeholder="Search descriptions, cards, categories..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="max-w-md" />
           </div>
 
-          {/* Transaction List */}
+          {/* Transaction List with Date Headers */}
           <div className="space-y-4">
-            {filteredTransactions.map(transaction => (
-              <TransactionItem key={transaction.id} transaction={transaction} />
+            {groupTransactionsByDate(filteredTransactions, new Date('2025-04-23T12:39:50+02:00')).map(({ label, transactions }) => (
+              <div key={label}>
+                <div className="rounded-md px-4 py-2 text-sm font-semibold mb-2" style={{background: '#F5E3E0', color: '#6E4555'}}>
+                  {label}
+                </div>
+                <div className="space-y-4">
+                  {transactions.map(transaction => (
+                    <TransactionItem key={transaction.id} transaction={transaction} />
+                  ))}
+                </div>
+              </div>
             ))}
             {/* Empty State Message */}
             {filteredTransactions.length === 0 && (
@@ -208,6 +260,8 @@ export default function TransactionsPage() {
               </div>
             )}
           </div>
+
+        
         </div>
       </div>
 
