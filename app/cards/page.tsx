@@ -9,7 +9,17 @@ import { AddCardDialog } from "@/components/add-card-dialog";
 import { CardItem } from "@/components/card-item";
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
 
+import { ProtectedRoute } from "@/components/auth/protected-route";
+
 export default function CardsPage() {
+  return (
+    <ProtectedRoute>
+      <CardsContent />
+    </ProtectedRoute>
+  );
+}
+
+function CardsContent() {
   // State for controlling the Add Card dialog visibility
   const [isAddCardOpen, setIsAddCardOpen] = useState(false);
   // REMOVED: useState for cards list
