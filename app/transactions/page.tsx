@@ -24,21 +24,27 @@ export default function TransactionsPage() {
 
 // --- Utility: Group transactions by date and label (Today, Yesterday, Date) ---
 function groupTransactionsByDate(transactions: Transaction[], now: Date) {
-  // Helper: Format date as YYYY-MM-DD
-  const formatYMD = (date: Date) => date.toISOString().split('T')[0];
+  // Helper: Format date as YYYY-MM-DD (LOCAL, not UTC)
+  const formatLocalYMD = (date: Date) => {
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
   // Helper: Format for header (e.g., April 21, 2025)
   const formatHeader = (date: Date) => date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Get today and yesterday as YYYY-MM-DD
-  const todayYMD = formatYMD(now);
+  // Get today and yesterday as YYYY-MM-DD (LOCAL)
+  const todayYMD = formatLocalYMD(now);
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
-  const yesterdayYMD = formatYMD(yesterday);
+  const yesterdayYMD = formatLocalYMD(yesterday);
 
-  // Group transactions by date string
+  // Group transactions by date string (LOCAL)
   const groups: Record<string, Transaction[]> = {};
   transactions.forEach(tx => {
-    const txYMD = formatYMD(new Date(tx.date));
+    const txDate = new Date(tx.date);
+    const txYMD = formatLocalYMD(txDate);
     if (!groups[txYMD]) groups[txYMD] = [];
     groups[txYMD].push(tx);
   });
@@ -54,6 +60,7 @@ function groupTransactionsByDate(transactions: Transaction[], now: Date) {
     return { label, transactions: groups[dateYMD] };
   });
 }
+
 
 function TransactionsContent() {
   // --- State for UI controls ---
@@ -238,7 +245,7 @@ function TransactionsContent() {
 
           {/* Transaction List with Date Headers */}
           <div className="space-y-4">
-            {groupTransactionsByDate(filteredTransactions, new Date('2025-04-23T12:39:50+02:00')).map(({ label, transactions }) => (
+            {groupTransactionsByDate(filteredTransactions, new Date()).map(({ label, transactions }) => (
               <div key={label}>
                 <div className="rounded-md px-4 py-2 text-sm font-semibold mb-2" style={{background: '#F5E3E0', color: '#6E4555'}}>
                   {label}
