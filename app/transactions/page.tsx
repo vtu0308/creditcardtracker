@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from '@tanstack/react-query';
 import { Input } from "@/components/ui/input"; // Added Input import
 import { Button } from "@/components/ui/button"; // Added Button import
@@ -62,6 +62,8 @@ function groupTransactionsByDate(transactions: Transaction[], now: Date) {
 }
 
 
+import { useSearchParams } from "next/navigation";
+
 function TransactionsContent() {
   // --- State for UI controls ---
   const [searchQuery, setSearchQuery] = useState(''); // Added back
@@ -70,6 +72,38 @@ function TransactionsContent() {
   const [dateFrom, setDateFrom] = useState<string>(''); // Added back
   const [dateTo, setDateTo] = useState<string>(''); // Added back
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false); // Added back
+
+  // --- Read filters from URL query params ---
+  const searchParams = useSearchParams();
+  
+  // Sync category and period from URL params
+  useEffect(() => {
+    const urlCategory = searchParams.get('category') || '';
+    const urlPeriod = searchParams.get('period') || '';
+    setSelectedCategory(urlCategory);
+    if (urlPeriod === '7D') {
+      const today = new Date();
+      const from = new Date();
+      from.setDate(today.getDate() - 6); // 6 days ago + today = 7 days
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+    } else if (urlPeriod === '30D') {
+      const today = new Date();
+      const from = new Date();
+      from.setDate(today.getDate() - 29);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+    } else if (urlPeriod === '90D') {
+      const today = new Date();
+      const from = new Date();
+      from.setDate(today.getDate() - 89);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+    } else {
+      setDateFrom('');
+      setDateTo('');
+    }
+  }, [searchParams]);
 
   // --- Fetch Data using useQuery (MUST BE DEFINED BEFORE useMemo uses them) ---
   const {

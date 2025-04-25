@@ -1,69 +1,166 @@
+/* === PASTE THIS CODE INTO your app/globals.css === */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* --- Copied from DESIRED DESIGN globals.css --- */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* Light mode */
+    --background: 350 33% 96%;
+    --foreground: 224 71% 4%;
+
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 224 71% 4%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 346.8 77.2% 49.8%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 224 71% 4%;
+
+    --primary: 340 43% 66%; /* Use this for #CE839C if preferred, or adjust HSL */
+    /* For specific #CE839C use: --primary: 336 33% 66%; */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 350 33% 96%;
+    --secondary-foreground: 340 40% 40%;
+
+    --muted: 350 33% 96%;
+    --muted-foreground: 240 3.8% 46.1%; /* Kept original muted grey */
+
+    --accent: 350 33% 96%;
+    --accent-foreground: 340 40% 40%;
+
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 346.8 77.2% 49.8%;
-    --radius: 0.5rem;
-    --font-sans: var(--font-jakarta), system-ui, -apple-system, BlinkMacSystemFont,
-      'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
-      'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 350 33% 90%; /* Use this for #EAE0E1 if preferred, or adjust HSL */
+     /* For specific #F9F2F3 bg border, use: --border: 350 15% 90%; */
+    --input: 350 33% 90%; /* Same as border */
+     /* For specific #F9F2F3 bg border, use: --input: 350 15% 90%; */
+
+    --ring: 340 43% 66%; /* Matches primary */
+     /* For specific #CE839C use: --ring: 336 33% 66%; */
+
+    --radius: 0.5rem; /* Kept from your original */
+
+    /* Category colors */
+    --category-beauty: 340 43% 66%;
+    --category-groceries: 350 33% 80%;
+
+    /* Dark mode variables (referenced by .dark) */
+    --background-dark: #1A1A1A;
+    --foreground-dark: #FFF;
+    --card-dark: #333;
+    --card-dark-foreground: #FFF;
+    --popover-dark: #333;
+    --popover-dark-foreground: #FFF;
+    --primary-dark: #CE839C;
+    --primary-dark-foreground: #FFF;
+    --secondary-dark: #E8A9C9;
+    --secondary-dark-foreground: #FFF;
+    --muted-dark: #A897A0;
+    --muted-dark-foreground: #FFF;
+    --accent-dark: #A897A0;
+    --accent-dark-foreground: #FFF;
+    --destructive-dark: #883955;
+    --destructive-dark-foreground: #FFF;
+    --border-dark: #E8A9C9;
+    --input-dark: #E8A9C9;
+    --ring-dark: #CE839C;
   }
 
-  .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 0 0% 95%;
-    --card: 24 9.8% 10%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 346.8 77.2% 49.8%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 12 6.5% 15.1%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 85.7% 97.3%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 346.8 77.2% 49.8%;
+  .dark { /* Copied from DESIRED DESIGN globals.css */
+    --background: var(--background-dark);
+    --foreground: var(--foreground-dark);
+    --card: var(--card-dark);
+    --card-foreground: var(--card-dark-foreground);
+    --popover: var(--popover-dark);
+    --popover-foreground: var(--popover-dark-foreground);
+    --primary: var(--primary-dark);
+    --primary-foreground: var(--primary-dark-foreground);
+    --secondary: var(--secondary-dark);
+    --secondary-foreground: var(--secondary-dark-foreground);
+    --muted: var(--muted-dark);
+    --muted-foreground: var(--muted-dark-foreground);
+    --accent: var(--accent-dark);
+    --accent-foreground: var(--accent-dark-foreground);
+    --destructive: var(--destructive-dark);
+    --destructive-foreground: var(--destructive-dark-foreground);
+    --border: var(--border-dark);
+    --input: var(--input-dark);
+    --ring: var(--ring-dark);
   }
 }
+/* --- End Copied from DESIRED --- */
 
+/* --- Base layer adjusted --- */
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border; /* Uses the NEW --border variable */
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-sans);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    /* Uses NEW --background/--foreground, applies font via tailwind config */
+    @apply bg-background text-foreground font-sans;
+    /* REMOVED explicit font-family/font-feature-settings */
   }
 }
+/* --- End Base layer adjusted --- */
 
-*:focus-visible {
-  outline: 2px solid #e8b4bc;
-  outline-offset: 2px;
+
+/* --- ADDED from DESIRED DESIGN globals.css --- */
+@layer components {
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-md hover:border-primary/30;
+  }
+
+  .stat-card {
+    @apply rounded-lg border bg-card p-4 shadow-sm card-hover;
+  }
+
+  .transaction-item {
+    @apply flex items-center justify-between rounded-md border bg-card p-4 card-hover;
+  }
+
+  .category-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .transaction-icon {
+    @apply flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary;
+  }
+
+  .category-item {
+    @apply flex items-center justify-between hover:bg-secondary/50 p-2 rounded-md transition-colors cursor-pointer;
+  }
+
+  .category-item:hover {
+    @apply shadow-sm;
+  }
+
+  .clickable-chart {
+    @apply cursor-pointer transition-opacity hover:opacity-90;
+  }
+
+  /* Glassmorphism styles */
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/70 dark:bg-black/30 border border-white/20 dark:border-white/10;
+  }
+
+  .glass-card {
+    @apply backdrop-blur-sm bg-white/90 dark:bg-black/50 border border-white/20 dark:border-white/10;
+  }
+
+  .glass-header {
+    @apply backdrop-blur-md bg-background/80 border-b border-primary/10;
+  }
+
+  .glass-section {
+    @apply backdrop-blur-sm bg-secondary/80 rounded-md;
+  }
 }
+/* --- END ADDED from DESIRED --- */
+
+
+/* REMOVED custom focus style */
+/* *:focus-visible { ... } */
+
+/* === END OF CODE TO PASTE === */

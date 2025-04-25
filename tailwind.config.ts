@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+const { fontFamily } = require("tailwindcss/defaultTheme") // Import default theme
 
 const config = {
     darkMode: ["class"],
@@ -18,6 +19,11 @@ const config = {
   		},
   	},
   	extend: {
+		fontFamily: {
+			// Use the specific variable name from your layout.tsx
+			// Also include the default stack as a fallback
+			sans: ["var(--font-sans)", ...fontFamily.sans],
+		},
   		colors: {
   			border: "hsl(var(--border))",
   			input: "hsl(var(--input))",

@@ -14,6 +14,8 @@ interface TransactionItemProps {
   onDelete?: () => void
 }
 
+import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "./category-icons";
+
 export function TransactionItem({ transaction, onDelete }: TransactionItemProps) {
   const queryClient = useQueryClient();
 
@@ -26,20 +28,27 @@ export function TransactionItem({ transaction, onDelete }: TransactionItemProps)
   const showBothAmounts = transaction.currency !== "VND"
   const vndAmount = transaction.vndAmount || 0
 
+  // Determine the icon to use based on the category name (fallback to default)
+  const categoryName = transaction.categoryName || "";
+  const Icon = CATEGORY_ICONS[categoryName] || DEFAULT_CATEGORY_ICON;
+
   return (
     <>
-      <Card className="bg-white/80 backdrop-blur-sm group">
+      <Card className="bg-white/80 backdrop-blur-sm transition-shadow group hover:shadow-lg hover:shadow-[#C58B9F]/20">
         <CardContent className="flex items-center justify-between p-4">
-          <div className="space-y-1">
-            <p className="font-medium text-[#6E4555]">{transaction.description}</p>
-            <div className="flex items-center text-sm text-[#6E4555]/70">
-              <span>{transaction.cardName}</span>
-              <span className="mx-2">•</span>
-              <span>{transaction.categoryName}</span>
+          {/* Icon at the start */}
+          <div className="flex items-center">
+            <span className="rounded-full" style={{ backgroundColor: '#F9EFF3', padding: '12px', marginRight: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  <Icon className="h-6 w-6" style={{ color: '#C58B9F' }} />
+</span>
+            <div className="space-y-1">
+              <p className="font-medium text-lg text-black leading-tight mb-1">{transaction.description}</p>
+              <div className="flex items-center gap-2 text-xs text-[#88848F]">
+                <span>{transaction.cardName}</span>
+                <span className="rounded-full bg-[#F9EFF3] px-2 py-0.5 text-[#C58B9F] text-xs font-semibold" style={{lineHeight: '1.2'}}>{transaction.categoryName}</span>
+                <span>{new Date(transaction.date).toLocaleDateString()}</span>
+              </div>
             </div>
-            <p className="text-xs text-[#6E4555]/70">
-              {new Date(transaction.date).toLocaleDateString()}
-            </p>
           </div>
           <div className="flex items-start gap-4">
             <div className="text-right">
@@ -52,14 +61,17 @@ export function TransactionItem({ transaction, onDelete }: TransactionItemProps)
                 </p>
               )}
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => setIsEditOpen(true)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
+            {/* Only show edit button on hover, remove its space otherwise */}
+            <div className="hidden group-hover:block">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="transition-opacity"
+                onClick={() => setIsEditOpen(true)}
+              >
+                <Pencil className="h-4 w-4 text-[#C58B9F]" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

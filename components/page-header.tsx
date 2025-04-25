@@ -1,3 +1,5 @@
+// No changes needed here. It uses standard text elements and text-muted-foreground,
+// which will automatically adopt the new theme's colors defined in globals.css.
 interface PageHeaderProps {
   title: string
   description?: string
@@ -6,14 +8,19 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, children }: PageHeaderProps) {
   return (
-    <div className="flex items-center justify-between space-y-2">
+    // Adding mb-6 or mb-8 for spacing below the header, common in dashboards
+    <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+        {/* These text classes will inherit colors correctly from the new theme */}
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
         {description && (
           <p className="text-muted-foreground">{description}</p>
         )}
       </div>
-      {children}
+      {/* Children (e.g., buttons) will align to the right on larger screens */}
+      <div className="flex items-center gap-2">
+          {children}
+      </div>
     </div>
   )
-} 
+}

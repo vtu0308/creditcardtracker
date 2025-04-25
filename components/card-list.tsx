@@ -11,7 +11,7 @@ import { PlusCircle } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton" // Example skeleton
 
 export function CardList() {
-  // State for controlling the Add Card dialog visibility
+  // State for controlling the <span className="font-bold text-sm">Add Card</span> dialog visibility
   const [isAddCardOpen, setIsAddCardOpen] = useState(false)
 
   // --- Fetch Cards using useQuery ---
@@ -52,8 +52,7 @@ export function CardList() {
            <h2 className="text-2xl font-bold tracking-tight text-red-600">Error Loading Cards</h2>
            {/* Still allow adding a card even if list fails to load */}
            <Button onClick={() => setIsAddCardOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Card
+              <span className="font-bold text-sm">Add Card</span>
            </Button>
         </div>
         <p className="text-red-500">Could not fetch your card list. Please try again later.</p>
@@ -67,8 +66,7 @@ export function CardList() {
        <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold tracking-tight">Your Cards</h2>
           <Button onClick={() => setIsAddCardOpen(true)}>
-             <PlusCircle className="mr-2 h-4 w-4" />
-             Add Card
+             <span className="font-bold text-sm">Add Card</span>
           </Button>
        </div>
        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
@@ -103,10 +101,13 @@ export function CardList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Your Cards</h2>
-        <Button onClick={() => setIsAddCardOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Card
-        </Button>
+        <Button
+  onClick={() => setIsAddCardOpen(true)}
+  style={{ backgroundColor: '#C58B9F', color: 'white', borderRadius: '9999px' }}
+  className="px-6 py-2 font-medium text-base shadow-none hover:bg-[#C58B9F]/90 transition-colors flex items-center gap-2"
+>
+  <span className="font-bold text-sm">Add Card</span>
+</Button>
       </div>
       <div className="grid gap-4">
         {/* Map over the 'cards' data fetched by useQuery */}
@@ -114,7 +115,7 @@ export function CardList() {
           <CardItem key={card.id} card={card} />
         ))}
       </div>
-      {/* Add Card Dialog - controlled by local state */}
+      {/* <span className="font-bold text-sm">Add Card</span> Dialog - controlled by local state */}
       <AddCardDialog open={isAddCardOpen} onOpenChange={setIsAddCardOpen} />
     </div>
   )

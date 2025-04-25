@@ -20,10 +20,13 @@ export function RecentTransactions() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Recent Transactions</h2>
-        <Button onClick={() => setIsAddTransactionOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Transaction
-        </Button>
+        <Button
+  onClick={() => setIsAddTransactionOpen(true)}
+  style={{ backgroundColor: '#C58B9F', color: 'white', borderRadius: '9999px' }}
+  className="px-6 py-2 font-medium text-base shadow-none hover:bg-[#C58B9F]/90 transition-colors flex items-center gap-2"
+>
+  <span className="font-bold text-sm">Add Transaction</span>
+</Button>
       </div>
       <div className="grid gap-4">
         {(transactions.slice(0, 5)).map((transaction) => (

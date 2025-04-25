@@ -8,7 +8,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {}, [])
 
   return (
-    <div className="min-h-full bg-[#F5E3E0]">
+    <div className="min-h-full bg-background">
       {children}
     </div>
   )
