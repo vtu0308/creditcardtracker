@@ -6,6 +6,7 @@ import { storage, Card } from "@/lib/storage" // Import Card type
 import { AddCardDialog } from "@/components/add-card-dialog"
 import { CardItem } from "@/components/card-item"
 import { Button } from "@/components/ui/button"
+import { AddCardButton } from "@/components/add-card-button"
 import { PlusCircle } from "lucide-react"
 // Optional: Import components for loading/error states
 import { Skeleton } from "@/components/ui/skeleton" // Example skeleton
@@ -101,13 +102,7 @@ export function CardList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Your Cards</h2>
-        <Button
-  onClick={() => setIsAddCardOpen(true)}
-  style={{ backgroundColor: '#C58B9F', color: 'white', borderRadius: '9999px' }}
-  className="px-6 py-2 font-medium text-base shadow-none hover:bg-[#C58B9F]/90 transition-colors flex items-center gap-2"
->
-  <span className="font-bold text-sm">Add Card</span>
-</Button>
+        <AddCardButton onClick={() => setIsAddCardOpen(true)} />
       </div>
       <div className="grid gap-4">
         {/* Map over the 'cards' data fetched by useQuery */}
