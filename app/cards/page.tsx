@@ -4,6 +4,7 @@ import { useState } from "react"; // Removed useEffect
 import { useQuery } from '@tanstack/react-query'; // Import useQuery
 import { storage, Card } from "@/lib/storage"; // Import Card type
 import { Button } from "@/components/ui/button";
+import { AddCardButton } from "@/components/add-card-button";
 import { PlusCircle } from "lucide-react";
 import { AddCardDialog } from "@/components/add-card-dialog";
 import { CardItem } from "@/components/card-item";
@@ -34,8 +35,6 @@ function CardsContent() {
     queryKey: ['cards'], // Use the consistent query key for cards
     queryFn: storage.getCards, // The async function to fetch cards
   });
-
-  // REMOVED: The useEffect hook that manually fetched cards and added the event listener
 
   // --- Render Loading State ---
   if (isLoading) {
@@ -91,10 +90,7 @@ function CardsContent() {
             View and manage your credit cards
           </p>
         </div>
-        <Button onClick={() => setIsAddCardOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Card
-        </Button>
+        <AddCardButton onClick={() => setIsAddCardOpen(true)} />
       </div>
 
       {/* Card Grid or Empty State */}
