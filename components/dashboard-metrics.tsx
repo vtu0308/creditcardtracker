@@ -226,36 +226,38 @@ export function DashboardMetrics() {
               </div>
               {/* Category Breakdown */}
               <div className="space-y-2 pt-2">
-                 <h4 className="text-sm font-medium text-muted-foreground">By Category:</h4>
-                {categoryTotals.map((category, index) => (
-  <div
-    key={category.name}
-    className="flex items-center justify-between cursor-pointer hover:bg-primary/10 rounded px-2 py-1 transition-colors"
-    onClick={() => {
-      router.push(`/transactions?category=${encodeURIComponent(category.id)}&period=${timePeriod}`);
-    }}
-    title={`Show transactions for ${category.name}`}
-    role="button"
-    tabIndex={0}
-    onKeyPress={(e) => {
-      if (e.key === 'Enter') {
-        router.push(`/transactions?category=${encodeURIComponent(category.id)}&period=${timePeriod}`);
-      }
-    }}
-  >
-    <div className="flex items-center gap-2">
-      <div
-        className="h-3 w-3 rounded-full"
-        style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
-      />
-      <span className="text-sm font-medium truncate max-w-[150px]">{category.name}</span>
-    </div>
-    <span className="text-sm text-muted-foreground">
-      {formatCurrency(category.value, "VND")}
-    </span>
-  </div>
-))}
+        <h4 className="text-sm font-medium text-muted-foreground">By Category:</h4>
+        <div className="flex flex-col gap-1 sm:gap-2 overflow-x-auto">
+          {categoryTotals.map((category, index) => (
+            <div
+              key={category.name}
+              className="flex items-center justify-between cursor-pointer hover:bg-primary/10 rounded px-2 py-1 transition-colors min-w-0"
+              onClick={() => {
+                router.push(`/transactions?category=${encodeURIComponent(category.id)}&period=${timePeriod}`);
+              }}
+              title={`Show transactions for ${category.name}`}
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  router.push(`/transactions?category=${encodeURIComponent(category.id)}&period=${timePeriod}`);
+                }
+              }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
+                />
+                <span className="text-sm font-medium truncate max-w-[90px] sm:max-w-[150px]">{category.name}</span>
               </div>
+              <span className="text-sm text-muted-foreground">
+                {formatCurrency(category.value, "VND")}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
             </div>
           </CardContent>
         </Card>
