@@ -6,12 +6,13 @@ import { storage, Card } from "@/lib/storage" // Import Card type
 import { AddCardDialog } from "@/components/add-card-dialog"
 import { CardItem } from "@/components/card-item"
 import { Button } from "@/components/ui/button"
+import { AddCardButton } from "@/components/add-card-button"
 import { PlusCircle } from "lucide-react"
 // Optional: Import components for loading/error states
 import { Skeleton } from "@/components/ui/skeleton" // Example skeleton
 
 export function CardList() {
-  // State for controlling the Add Card dialog visibility
+  // State for controlling the <span className="font-bold text-sm">Add Card</span> dialog visibility
   const [isAddCardOpen, setIsAddCardOpen] = useState(false)
 
   // --- Fetch Cards using useQuery ---
@@ -52,8 +53,7 @@ export function CardList() {
            <h2 className="text-2xl font-bold tracking-tight text-red-600">Error Loading Cards</h2>
            {/* Still allow adding a card even if list fails to load */}
            <Button onClick={() => setIsAddCardOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Card
+              <span className="font-bold text-sm">Add Card</span>
            </Button>
         </div>
         <p className="text-red-500">Could not fetch your card list. Please try again later.</p>
@@ -67,8 +67,7 @@ export function CardList() {
        <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold tracking-tight">Your Cards</h2>
           <Button onClick={() => setIsAddCardOpen(true)}>
-             <PlusCircle className="mr-2 h-4 w-4" />
-             Add Card
+             <span className="font-bold text-sm">Add Card</span>
           </Button>
        </div>
        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
@@ -103,10 +102,7 @@ export function CardList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Your Cards</h2>
-        <Button onClick={() => setIsAddCardOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Card
-        </Button>
+        <AddCardButton onClick={() => setIsAddCardOpen(true)} />
       </div>
       <div className="grid gap-4">
         {/* Map over the 'cards' data fetched by useQuery */}
@@ -114,7 +110,7 @@ export function CardList() {
           <CardItem key={card.id} card={card} />
         ))}
       </div>
-      {/* Add Card Dialog - controlled by local state */}
+      {/* <span className="font-bold text-sm">Add Card</span> Dialog - controlled by local state */}
       <AddCardDialog open={isAddCardOpen} onOpenChange={setIsAddCardOpen} />
     </div>
   )

@@ -7,6 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { storage, Transaction } from "@/lib/storage"; // Import Transaction type
 import { formatCurrency } from "@/lib/currency"; // Assuming formatCurrency is correct
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { SpendingPieChart } from "@/components/SpendingPieChart";
+
+// Category colors for the pie chart
+const CATEGORY_COLORS = [
+  "#CE839C", "#E8B4BC", "#6E4555", "#F5E3E0", "#FFB5A7",
+  "#FCD5CE", "#F8EDEB", "#F9DCC4", "#FEC89A",
+];
 
 // Time period options for filtering
 const TIME_PERIODS = {
@@ -19,18 +26,16 @@ const TIME_PERIODS = {
 type TimePeriod = keyof typeof TIME_PERIODS;
 
 interface CategoryTotal {
+  id: string;
   name: string;
   value: number;
   color: string;
 }
 
-// Category colors for the pie chart
-const CATEGORY_COLORS = [
-  "#D282A6", "#E8B4BC", "#6E4555", "#F5E3E0", "#FFB5A7",
-  "#FCD5CE", "#F8EDEB", "#F9DCC4", "#FEC89A",
-];
+import { useRouter } from "next/navigation";
 
 export function DashboardMetrics() {
+  const router = useRouter();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("30D");
   // REMOVED: useState for isLoading and transactions
 
@@ -55,7 +60,7 @@ export function DashboardMetrics() {
     // Set cutoffDate to beginning of time if days is 0 (ALL time)
     const cutoffDate = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : new Date(0);
 
-    const totals: { [key: string]: number } = {};
+    const totals: { [key: string]: { id: string, value: number } } = {};
 
     transactions.forEach(transaction => { // Use transactions directly from useQuery
       let transactionDate: Date;
@@ -67,18 +72,23 @@ export function DashboardMetrics() {
       }
 
       if (transactionDate >= cutoffDate) {
-        // Ensure categoryName exists, provide fallback
+        // Ensure categoryName and categoryId exist, provide fallback
         const categoryName = transaction.categoryName || 'Uncategorized';
+        const categoryId = transaction.categoryId || 'uncategorized';
         // Ensure amount is a valid number, default to 0
         const amount = typeof transaction.vndAmount === 'number' && !isNaN(transaction.vndAmount)
                            ? transaction.vndAmount
                            : 0;
-        totals[categoryName] = (totals[categoryName] || 0) + amount;
+        if (!totals[categoryName]) {
+          totals[categoryName] = { id: categoryId, value: 0 };
+        }
+        totals[categoryName].value += amount;
       }
     });
 
     return Object.entries(totals)
-      .map(([name, value], index) => ({
+      .map(([name, { id, value }], index) => ({
+        id,
         name,
         value,
         color: CATEGORY_COLORS[index % CATEGORY_COLORS.length]
@@ -192,37 +202,12 @@ export function DashboardMetrics() {
         {/* Pie Chart Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Total Spending by Category</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[400px] pt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryTotals}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={160}
-                  paddingAngle={2}
-                >
-                  {categoryTotals.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) => formatCurrency(value as number, "VND")} // Use consistent formatter
-                />
-                <Legend
-                  layout="horizontal"
-                  verticalAlign="bottom"
-                  align="center"
-                  wrapperStyle={{ paddingTop: "20px" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
+  <CardTitle>Total Spending by Category</CardTitle>
+  <p className="text-muted-foreground text-base font-medium mt-1">Your spending breakdown by category</p>
+</CardHeader>
+          <CardContent className="h-[400px] w-full flex flex-col items-center justify-center">
+  <SpendingPieChart categoryTotals={categoryTotals} colors={CATEGORY_COLORS} />
+</CardContent>
         </Card>
 
         {/* Summary Card */}
@@ -241,22 +226,38 @@ export function DashboardMetrics() {
               </div>
               {/* Category Breakdown */}
               <div className="space-y-2 pt-2">
-                 <h4 className="text-sm font-medium text-muted-foreground">By Category:</h4>
-                {categoryTotals.map((category) => (
-                  <div key={category.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: category.color }}
-                      />
-                      <span className="text-sm font-medium truncate max-w-[150px]">{category.name}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {formatCurrency(category.value, "VND")}
-                    </span>
-                  </div>
-                ))}
+        <h4 className="text-sm font-medium text-muted-foreground">By Category:</h4>
+        <div className="flex flex-col gap-1 sm:gap-2 overflow-x-auto">
+          {categoryTotals.map((category, index) => (
+            <div
+              key={category.name}
+              className="flex items-center justify-between cursor-pointer hover:bg-primary/10 rounded px-2 py-1 transition-colors min-w-0"
+              onClick={() => {
+                router.push(`/transactions?category=${encodeURIComponent(category.id)}&period=${timePeriod}`);
+              }}
+              title={`Show transactions for ${category.name}`}
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  router.push(`/transactions?category=${encodeURIComponent(category.id)}&period=${timePeriod}`);
+                }
+              }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
+                />
+                <span className="text-sm font-medium truncate max-w-[90px] sm:max-w-[150px]">{category.name}</span>
               </div>
+              <span className="text-sm text-muted-foreground">
+                {formatCurrency(category.value, "VND")}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
             </div>
           </CardContent>
         </Card>

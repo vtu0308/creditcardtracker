@@ -223,59 +223,59 @@ export function SpendingAnalytics({ className }: SpendingAnalyticsProps) {
     <UICard className={className}>
       <CardHeader>
         <CardTitle>Statement Cycle Deep Dive</CardTitle>
+        <p className="text-muted-foreground text-base mt-1">Analyze your spending by statement cycle</p>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4">
-          {/* Card Filter Select */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="card-filter-sa">Filter by Card</Label>
-            <Select
-                value={selectedCard}
-                onValueChange={setSelectedCard}
-                // Disable if no cards loaded
-                disabled={cards.length === 0}
-            >
-              <SelectTrigger id="card-filter-sa">
-                <SelectValue placeholder={cards.length === 0 ? "No cards available" : "Select a card"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Cards</SelectItem>
-                {cards.map(card => (
-                  <SelectItem key={card.id} value={card.id}>
-                    {card.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex flex-col gap-4">
+          {/* Filters Row */}
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Card Filter Select */}
+            <div className="flex flex-col gap-2 flex-1 min-w-[180px]">
+              <Label htmlFor="card-filter-sa" className="font-bold">Filter by Card</Label>
+              <Select
+                  value={selectedCard}
+                  onValueChange={setSelectedCard}
+                  disabled={cards.length === 0}
+              >
+                <SelectTrigger id="card-filter-sa">
+                  <SelectValue placeholder={cards.length === 0 ? "No cards available" : "Select a card"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cards</SelectItem>
+                  {cards.map(card => (
+                    <SelectItem key={card.id} value={card.id}>
+                      {card.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Statement Cycle Select */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="cycle-filter-sa">Filter by Statement Cycle</Label>
-            <Select
-                value={selectedCycleValue}
-                onValueChange={setSelectedCycleValue}
-                // Disable if no cycles generated (e.g., no cards)
-                disabled={cycles.length === 0}
-            >
-              <SelectTrigger id="cycle-filter-sa">
-                <SelectValue placeholder={cycles.length === 0 ? "No cycles available" : "Select a cycle"} />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Show disabled item if no cycles */}
-                {cycles.length === 0 && <SelectItem value="-" disabled>No cycles generated</SelectItem>}
-                {/* Map over calculated cycles */}
-                {cycles.map((cycle) => (
-                  <SelectItem
-                    key={cycle.value} // Use stable string value as key
-                    value={cycle.value}
-                    className={cycle.label.startsWith('Current Cycle') ? 'font-medium text-pink-600' : ''}
-                  >
-                    {cycle.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Statement Cycle Select */}
+            <div className="flex flex-col gap-2 flex-1 min-w-[220px]">
+              <Label htmlFor="cycle-filter-sa" className="font-bold">Filter by Statement Cycle</Label>
+              <Select
+                  value={selectedCycleValue}
+                  onValueChange={setSelectedCycleValue}
+                  disabled={cycles.length === 0}
+              >
+                <SelectTrigger id="cycle-filter-sa">
+                  <SelectValue placeholder={cycles.length === 0 ? "No cycles available" : "Select a cycle"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {cycles.length === 0 && <SelectItem value="-" disabled>No cycles generated</SelectItem>}
+                  {cycles.map((cycle) => (
+                    <SelectItem
+                      key={cycle.value}
+                      value={cycle.value}
+                      className={cycle.label.startsWith('Current Cycle') ? 'font-medium text-pink-600' : ''}
+                    >
+                      {cycle.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Spending Display Area */}
@@ -300,7 +300,7 @@ export function SpendingAnalytics({ className }: SpendingAnalyticsProps) {
             </div>
             <div>
               <h3 className="text-lg font-semibold">Total Spending for Cycle</h3>
-              <p className="text-3xl font-bold text-pink-400">
+              <p className="text-3xl font-bold" style={{ color: '#ce839c' }}>
                 {/* Format the calculated total spending */}
                 {formatCurrency(totalSpending, "VND")}
               </p>

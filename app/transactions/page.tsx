@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from '@tanstack/react-query';
 import { Input } from "@/components/ui/input"; // Added Input import
 import { Button } from "@/components/ui/button"; // Added Button import
+import { AddTransactionButton } from "@/components/add-transaction-button";
 import { PlusCircle } from "lucide-react"; // Added Icon import
 import { AddTransactionDialog } from "@/components/add-transaction-dialog"; // Added Dialog import
 import { storage, Transaction, Card, Category } from "@/lib/storage";
@@ -11,36 +12,27 @@ import { TransactionItem } from "@/components/transaction-item"; // Added Transa
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Search } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/protected-route";
-
-export default function TransactionsPage() {
-  return (
-    <ProtectedRoute>
-      <TransactionsContent />
-    </ProtectedRoute>
-  );
-}
+import { useSearchParams } from "next/navigation"; // Make sure this import is present
 
 // --- Utility: Group transactions by date and label (Today, Yesterday, Date) ---
+// (Keep your existing groupTransactionsByDate function here)
 function groupTransactionsByDate(transactions: Transaction[], now: Date) {
-  // Helper: Format date as YYYY-MM-DD (LOCAL, not UTC)
   const formatLocalYMD = (date: Date) => {
     const y = date.getFullYear();
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
     const d = date.getDate().toString().padStart(2, '0');
     return `${y}-${m}-${d}`;
   };
-  // Helper: Format for header (e.g., April 21, 2025)
   const formatHeader = (date: Date) => date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Get today and yesterday as YYYY-MM-DD (LOCAL)
   const todayYMD = formatLocalYMD(now);
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   const yesterdayYMD = formatLocalYMD(yesterday);
 
-  // Group transactions by date string (LOCAL)
   const groups: Record<string, Transaction[]> = {};
   transactions.forEach(tx => {
     const txDate = new Date(tx.date);
@@ -49,12 +41,10 @@ function groupTransactionsByDate(transactions: Transaction[], now: Date) {
     groups[txYMD].push(tx);
   });
 
-  // Sort date keys descending (most recent first)
   const sortedKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
-  // Map to array with label
   return sortedKeys.map(dateYMD => {
-    let label = formatHeader(new Date(dateYMD));
+    let label = formatHeader(new Date(dateYMD + 'T00:00:00')); // Ensure correct date parsing for header
     if (dateYMD === todayYMD) label = 'Today';
     else if (dateYMD === yesterdayYMD) label = 'Yesterday';
     return { label, transactions: groups[dateYMD] };
@@ -62,87 +52,127 @@ function groupTransactionsByDate(transactions: Transaction[], now: Date) {
 }
 
 
+// --- Main Page Component ---
+export default function TransactionsPage() {
+  return (
+    <ProtectedRoute>
+      <TransactionsContent />
+    </ProtectedRoute>
+  );
+}
+
+
 function TransactionsContent() {
   // --- State for UI controls ---
-  const [searchQuery, setSearchQuery] = useState(''); // Added back
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCard, setSelectedCard] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<string>(''); // Added back
-  const [dateTo, setDateTo] = useState<string>(''); // Added back
-  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false); // Added back
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
 
-  // --- Fetch Data using useQuery (MUST BE DEFINED BEFORE useMemo uses them) ---
-  const {
-    data: transactions = [], // <-- DEFINITION FOR 'transactions'
-    isLoading: isLoadingTransactions,
-    isError: isErrorTransactions,
-    error: transactionsError,
-  } = useQuery<Transaction[]>({
-    queryKey: ['transactions'],
-    queryFn: storage.getTransactions,
-  });
+  // --- Read filters from URL query params ---
+  const searchParams = useSearchParams();
 
-  const {
-    data: cards = [], // <-- DEFINITION FOR 'cards'
-    isLoading: isLoadingCards,
-    isError: isErrorCards,
-    error: cardsError,
-  } = useQuery<Card[]>({
-    queryKey: ['cards'],
-    queryFn: storage.getCards,
-  });
+  // Sync category and period from URL params (Keep your existing useEffect)
+  useEffect(() => {
+    const urlCategory = searchParams.get('category') || '';
+    const urlPeriod = searchParams.get('period') || '';
+    setSelectedCategory(urlCategory);
+    if (urlPeriod === '7D') {
+      const today = new Date();
+      const from = new Date();
+      from.setDate(today.getDate() - 6);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+    } else if (urlPeriod === '30D') {
+      const today = new Date();
+      const from = new Date();
+      from.setDate(today.getDate() - 29);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+    } else if (urlPeriod === '90D') {
+      const today = new Date();
+      const from = new Date();
+      from.setDate(today.getDate() - 89);
+      setDateFrom(from.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+    } else {
+       // Keep existing dates if no period is specified or period is invalid?
+       // Or clear them like before? Clearing seems reasonable if period controls dates.
+       // setDateFrom('');
+       // setDateTo('');
+       // Decide based on desired UX when URL period changes/is removed
+    }
+  }, [searchParams]); // Removed date setters from dependency array as they cause loops
 
-  const {
-    data: categories = [], // <-- DEFINITION FOR 'categories'
-    isLoading: isLoadingCategories,
-    isError: isErrorCategories,
-    error: categoriesError,
-  } = useQuery<Category[]>({
-    queryKey: ['categories'],
-    queryFn: storage.getCategories,
-  });
+  // --- Fetch Data using useQuery ---
+   const {
+      data: transactions = [],
+      isLoading: isLoadingTransactions,
+      isError: isErrorTransactions,
+      error: transactionsError,
+   } = useQuery<Transaction[]>({
+      queryKey: ['transactions'],
+      queryFn: storage.getTransactions,
+   });
+
+   const {
+      data: cards = [],
+      isLoading: isLoadingCards,
+      isError: isErrorCards,
+      error: cardsError,
+   } = useQuery<Card[]>({
+      queryKey: ['cards'],
+      queryFn: storage.getCards,
+   });
+
+   const {
+      data: categories = [],
+      isLoading: isLoadingCategories,
+      isError: isErrorCategories,
+      error: categoriesError,
+   } = useQuery<Category[]>({
+      queryKey: ['categories'],
+      queryFn: storage.getCategories,
+   });
 
 
   // --- Calculate Filtered Transactions using useMemo ---
   const filteredTransactions = useMemo(() => {
-    console.log("[TransactionsPage] Filtering transactions...");
-    // Now 'transactions' exists because it's defined above by useQuery
+    // Keep your existing useMemo logic
     return transactions.filter(transaction => {
-      // Card Filter
-      if (selectedCard && transaction.cardId !== selectedCard) {
-        return false;
-      }
-      // Category Filter
-      if (selectedCategory && transaction.categoryId !== selectedCategory) {
-        return false;
-      }
-      // Date From Filter
+      if (selectedCard && transaction.cardId !== selectedCard) return false;
+      if (selectedCategory && transaction.categoryId !== selectedCategory) return false;
       if (dateFrom) {
           try {
-              if (new Date(transaction.date) < new Date(dateFrom)) return false;
+              // Compare only dates, ignore time by creating date objects at midnight UTC
+              const txDateOnly = new Date(Date.UTC(new Date(transaction.date).getUTCFullYear(), new Date(transaction.date).getUTCMonth(), new Date(transaction.date).getUTCDate()));
+              const fromDateOnly = new Date(Date.UTC(new Date(dateFrom).getUTCFullYear(), new Date(dateFrom).getUTCMonth(), new Date(dateFrom).getUTCDate()));
+              if (txDateOnly < fromDateOnly) return false;
           } catch { return false; }
       }
-      // Date To Filter
-       if (dateTo) {
-           try {
-               const dateToObj = new Date(dateTo);
-               dateToObj.setHours(23, 59, 59, 999);
-               if (new Date(transaction.date) > dateToObj) return false;
-           } catch { return false; }
-       }
-      // Search Query Filter
+      if (dateTo) {
+          try {
+              // Compare only dates, ignore time
+               const txDateOnly = new Date(Date.UTC(new Date(transaction.date).getUTCFullYear(), new Date(transaction.date).getUTCMonth(), new Date(transaction.date).getUTCDate()));
+               const toDateOnly = new Date(Date.UTC(new Date(dateTo).getUTCFullYear(), new Date(dateTo).getUTCMonth(), new Date(dateTo).getUTCDate()));
+               if (txDateOnly > toDateOnly) return false;
+          } catch { return false; }
+      }
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         const descMatch = transaction.description.toLowerCase().includes(searchLower);
-        const cardMatch = (transaction.cardName || '').toLowerCase().includes(searchLower);
-        const catMatch = (transaction.categoryName || '').toLowerCase().includes(searchLower);
+        // Ensure cardName and categoryName exist before calling toLowerCase
+        const cardMatch = transaction.cardName && transaction.cardName.toLowerCase().includes(searchLower);
+        const catMatch = transaction.categoryName && transaction.categoryName.toLowerCase().includes(searchLower);
         if (!descMatch && !cardMatch && !catMatch) {
           return false;
         }
       }
       return true;
     });
-  }, [transactions, searchQuery, selectedCard, selectedCategory, dateFrom, dateTo]); // Dependencies are correct
+  }, [transactions, searchQuery, selectedCard, selectedCategory, dateFrom, dateTo]);
 
 
   // --- Combined Loading/Error State ---
@@ -152,17 +182,16 @@ function TransactionsContent() {
 
   // --- Render Loading State ---
   if (isLoading) {
+     // Keep your existing Skeleton loading state
      return (
         <div className="container py-6 space-y-6">
-           {/* Header Skeleton */}
            <div className="flex items-center justify-between">
               <div> <Skeleton className="h-8 w-40 mb-2" /> <Skeleton className="h-4 w-64" /> </div>
            </div>
-           {/* Content Card Skeleton */}
            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 space-y-4">
               <div className="flex justify-between items-center mb-4"> <Skeleton className="h-8 w-48" /> <Skeleton className="h-10 w-40" /> </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 items-end"> <Skeleton className="h-16 w-full" /> <Skeleton className="h-16 w-full" /> <Skeleton className="h-16 w-full" /> <Skeleton className="h-16 w-full" /> </div>
-              <Skeleton className="h-10 w-full max-w-md mb-6" />
+              <Skeleton className="h-10 w-full mb-6" /> {/* Adjusted skeleton for full width search */}
               <div className="space-y-4"> <Skeleton className="h-16 w-full rounded-lg" /> <Skeleton className="h-16 w-full rounded-lg" /> <Skeleton className="h-16 w-full rounded-lg" /> </div>
            </div>
         </div>
@@ -171,13 +200,14 @@ function TransactionsContent() {
 
   // --- Render Error State ---
   if (isError) {
-      return (
-         <div className="container py-6 space-y-6">
-            <div className="flex items-center justify-between">
-               <div> <h1 className="text-2xl font-bold tracking-tight text-red-600">Error Loading Data</h1> <p className="text-muted-foreground"> Could not load page data. Please try again later. </p> {error && <p className="text-sm text-red-500 mt-2">Details: {error.message}</p>} </div>
-            </div>
-         </div>
-      );
+      // Keep your existing Error state
+       return (
+          <div className="container py-6 space-y-6">
+             <div className="flex items-center justify-between">
+                <div> <h1 className="text-2xl font-bold tracking-tight text-red-600">Error Loading Data</h1> <p className="text-muted-foreground"> Could not load page data. Please try again later. </p> {error && <p className="text-sm text-red-500 mt-2">Details: {error.message}</p>} </div>
+             </div>
+          </div>
+       );
   }
 
   // --- Render Main Content ---
@@ -201,10 +231,7 @@ function TransactionsContent() {
                 <h2 className="text-xl font-semibold tracking-tight">Transaction History</h2>
                 <p className="text-sm text-muted-foreground">Search and filter your transaction history</p>
              </div>
-             <Button onClick={() => setIsAddTransactionOpen(true)}>
-               <PlusCircle className="mr-2 h-4 w-4" />
-               Add Transaction
-             </Button>
+             <AddTransactionButton onClick={() => setIsAddTransactionOpen(true)} />
           </div>
 
           {/* Filters Section */}
@@ -237,17 +264,26 @@ function TransactionsContent() {
              </div>
           </div>
 
-          {/* Search Input */}
-          <div className="mb-6">
+          {/* Search Input - MODIFIED with Icon */}
+          <div className="relative mb-6"> {/* Added relative positioning */}
              <Label htmlFor="filter-search" className="sr-only">Search Transactions</Label>
-             <Input id="filter-search" placeholder="Search descriptions, cards, categories..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="max-w-md" />
+             {/* Icon positioned absolutely inside the relative div */}
+             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+             <Input
+               id="filter-search"
+               placeholder="Search descriptions, cards, categories..."
+               value={searchQuery}
+               onChange={(e) => setSearchQuery(e.target.value)}
+               className="pl-10" // Added padding-left to make space for the icon
+             />
           </div>
 
           {/* Transaction List with Date Headers */}
           <div className="space-y-4">
             {groupTransactionsByDate(filteredTransactions, new Date()).map(({ label, transactions }) => (
               <div key={label}>
-                <div className="rounded-md px-4 py-2 text-sm font-semibold mb-2" style={{background: '#F5E3E0', color: '#6E4555'}}>
+                {/* Date Header - MODIFIED */}
+                <div className="rounded-md bg-muted px-4 py-2 text-sm font-semibold text-muted-foreground mb-2"> {/* <-- CHANGED STYLING HERE */}
                   {label}
                 </div>
                 <div className="space-y-4">
@@ -258,7 +294,7 @@ function TransactionsContent() {
               </div>
             ))}
             {/* Empty State Message */}
-            {filteredTransactions.length === 0 && (
+            {filteredTransactions.length === 0 && !isLoading && ( // Added !isLoading check
               <div className="text-center py-8 text-muted-foreground">
                  {(searchQuery || selectedCard || selectedCategory || dateFrom || dateTo)
                    ? 'No transactions found matching your filters.'
@@ -268,7 +304,7 @@ function TransactionsContent() {
             )}
           </div>
 
-        
+
         </div>
       </div>
 

@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-// Ensure the path to useToast is correct for your setup
-// If you placed it directly in components/ui, use that path
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Input } from "@/components/ui/input";
@@ -13,300 +11,266 @@ import { Label } from "@/components/ui/label";
 import { storage, Category } from "@/lib/storage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pencil, Save, Trash2, X, LogOut } from "lucide-react";
-import { ProtectedRoute } from "@/components/auth/protected-route"; // Import ProtectedRoute
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// The default export is the page component Next.js renders
 export default function SettingsPage() {
-
-  // --- Hooks needed for Auth/Routing/Toast/QueryClient are called here ---
+  // --- Hooks ---
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { user, signOut } = useAuth(); // Get user info and signOut function
-  const router = useRouter(); // For redirection after sign out
+  const { user, signOut } = useAuth();
+  const router = useRouter();
 
-  // --- State for UI Controls (Category CRUD + Sign Out) ---
+  // --- State ---
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
-  const [isSavingEdit, setIsSavingEdit] = useState<string | null>(null); // Store ID being saved
-  const [isDeleting, setIsDeleting] = useState<string | null>(null); // Store ID being deleted
-  const [isSigningOut, setIsSigningOut] = useState(false); // State for sign out button
+  const [isSavingEdit, setIsSavingEdit] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-  // --- Fetch Categories using useQuery ---
+  // --- Fetch Categories ---
   const {
-    data: categories = [], // Default to empty array
-    isLoading,
+    data: categories = [],
+    isLoading, // Renamed back for simplicity as it's the main query here
     isError,
-    error, // Catch the error object
+    error,
   } = useQuery<Category[]>({
-    queryKey: ['categories'], // Unique key for categories cache
-    queryFn: storage.getCategories, // Fetch function
+    queryKey: ['categories'],
+    queryFn: storage.getCategories,
   });
 
-  // --- Add Category Handler ---
+  // --- Handlers (Keep all your handlers here as before) ---
   async function handleAddCategory() {
     const trimmedName = newCategoryName.trim();
     if (!trimmedName || isAdding) return;
-
     setIsAdding(true);
     try {
       await storage.addCategory(trimmedName);
-      // Invalidate cache AFTER successful operation
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast({
-        title: "Category Added",
-        description: `Category "${trimmedName}" was successfully added.`,
-      });
-      setNewCategoryName(""); // Clear input on success
+      toast({ title: "Category Added", description: `Category "${trimmedName}" added.` });
+      setNewCategoryName("");
     } catch (err) {
       console.error("Error adding category:", err);
-      toast({
-        variant: "destructive",
-        title: "Error Adding Category",
-        description: err instanceof Error ? err.message : "An unknown error occurred.",
-      });
-    } finally {
-      setIsAdding(false);
-    }
+      toast({ variant: "destructive", title: "Error Adding Category", description: err instanceof Error ? err.message : "Unknown error." });
+    } finally { setIsAdding(false); }
   }
-
-  // --- Start Editing Handler ---
   function handleStartEdit(category: Category) {
     setEditingId(category.id);
-    setEditingName(category.name); // Initialize editingName with current name
+    setEditingName(category.name);
   }
-
-  // --- Cancel Editing Handler ---
   function handleCancelEdit() {
     setEditingId(null);
     setEditingName("");
   }
-
-  // --- Save Edit Handler ---
   async function handleSaveEdit(id: string) {
     const trimmedName = editingName.trim();
-    // Ensure editingId matches the id being saved, prevents potential race conditions
     if (!trimmedName || isSavingEdit || editingId !== id) return;
-
     const originalCategory = categories.find(cat => cat.id === id);
-    // Avoid API call if name hasn't changed
     if (originalCategory && originalCategory.name === trimmedName) {
-      console.log("[SettingsPage] No changes detected, skipping update.");
-      handleCancelEdit(); // Exit edit mode
-      return;
+      handleCancelEdit(); return;
     }
-
-    setIsSavingEdit(id); // Track which one is saving
+    setIsSavingEdit(id);
     try {
       await storage.updateCategory(id, trimmedName);
-      // Invalidate cache AFTER successful operation
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast({
-        title: "Category Updated",
-        description: `Category updated to "${trimmedName}".`,
-      });
-      handleCancelEdit(); // Reset editing state on success
-
+      toast({ title: "Category Updated", description: `Category updated to "${trimmedName}".` });
+      handleCancelEdit();
     } catch (err) {
       console.error("Error updating category:", err);
-      toast({
-        variant: "destructive",
-        title: "Error Updating Category",
-        description: err instanceof Error ? err.message : "An unknown error occurred.",
-      });
-      // Decide on UX: Maybe don't cancel edit on error?
-      // handleCancelEdit();
-    } finally {
-      setIsSavingEdit(null);
-    }
+      toast({ variant: "destructive", title: "Error Updating Category", description: err instanceof Error ? err.message : "Unknown error." });
+    } finally { setIsSavingEdit(null); }
   }
-
-  // --- Delete Category Handler ---
   async function handleDeleteCategory(id: string, name: string) {
-    // Prevent delete if currently editing another or deleting this one
     if (isDeleting || editingId) return;
-
-    setIsDeleting(id); // Track which one is deleting
+    setIsDeleting(id);
     try {
       await storage.deleteCategory(id);
-       // Invalidate cache AFTER successful operation
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      // Consider if transactions should also be invalidated if deleting a category impacts them
-      // queryClient.invalidateQueries({ queryKey: ['transactions'] });
-
-      toast({
-        title: "Category Deleted",
-        description: `Category "${name}" was successfully deleted.`,
-      });
-      // State updates automatically via useQuery refetch
-
+      toast({ title: "Category Deleted", description: `Category "${name}" deleted.` });
     } catch (err) {
       console.error("Error deleting category:", err);
-      toast({
-        variant: "destructive",
-        title: "Error Deleting Category",
-        description: err instanceof Error ? err.message : "An unknown error occurred.",
-      });
-    } finally {
-      setIsDeleting(null);
-    }
+      toast({ variant: "destructive", title: "Error Deleting Category", description: err instanceof Error ? err.message : "Unknown error." });
+    } finally { setIsDeleting(null); }
   }
-
-  // --- Sign Out Handler ---
   async function handleSignOut() {
     if (isSigningOut) return;
     setIsSigningOut(true);
     try {
-      await signOut(); // Call the signOut function from useAuth context
-      toast({ title: "Signed Out", description: "Redirecting to login..." });
-      router.push('/login'); // Redirect to login page
+      await signOut();
+      toast({ title: "Signed Out", description: "Redirecting..." });
+      router.push('/login');
     } catch (err) {
       console.error("Sign out error:", err);
-      toast({
-        variant: "destructive",
-        title: "Sign Out Failed",
-        description: err instanceof Error ? err.message : "An unknown error occurred.",
-      });
-    } finally {
-      setIsSigningOut(false);
-    }
+      toast({ variant: "destructive", title: "Sign Out Failed", description: err instanceof Error ? err.message : "Unknown error." });
+    } finally { setIsSigningOut(false); }
   }
+  // --- End Handlers ---
+
 
   // --- Render Logic ---
-
-  // Use ProtectedRoute to wrap the entire content
-  // It will handle the loading/redirect logic based on auth state
   return (
     <ProtectedRoute>
-      <div className="max-w-xl mx-auto py-8 space-y-8">
+      <div className="container py-10">
+        {/* Page Header */}
+        <h1 className="text-2xl font-bold mb-1">Settings</h1>
+        <p className="text-muted-foreground mb-8">Manage your account and preferences</p>
 
-        {/* Manage Categories Section */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Manage Categories</h2>
+        {/* Tabs */}
+        <Tabs defaultValue="categories" className="space-y-6">
+          {/* Tab Triggers */}
+          <TabsList>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          </TabsList>
 
-          {/* Add Category Form */}
-          <div className="flex gap-2 mb-6">
-            <Label htmlFor="new-category-name" className="sr-only">New Category Name</Label>
-            <Input
-              id="new-category-name"
-              placeholder="New category name"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-              disabled={isAdding}
-            />
-            <Button onClick={handleAddCategory} disabled={isAdding || !newCategoryName.trim()}>
-              {isAdding ? "Adding..." : "Add"}
-            </Button>
-          </div>
+          {/* Categories Tab Content */}
+          <TabsContent value="categories" className="border-none p-0 outline-none">
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+              <h2 className="text-xl font-semibold mb-1">Manage Categories</h2>
+              <p className="text-sm text-muted-foreground mb-4">Add, edit, or remove transaction categories</p>
 
-          {/* Loading State for Category List */}
-          {isLoading && (
-            <div className="space-y-2 border rounded-md p-4">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-            </div>
-          )}
-
-          {/* Error State for Category List */}
-          {isError && !isLoading && (
-             <p className="text-red-600 px-4 py-4 border rounded-md border-destructive bg-destructive/10">
-                Error loading categories: {error instanceof Error ? error.message : 'Unknown error'}
-             </p>
-          )}
-
-          {/* Category List (Render only if not loading and no error) */}
-          {!isLoading && !isError && (
-            <ul className="divide-y divide-border rounded-md border">
-              {categories.length === 0 && (
-                <li className="px-4 py-4 text-center text-muted-foreground">
-                   No categories created yet.
-                </li>
-              )}
-              {categories.map((cat) => (
-                <li key={cat.id} className="flex items-center gap-2 px-4 py-2 hover:bg-muted/50">
-                  {editingId === cat.id ? (
-                    // Edit Mode
-                    <>
-                      <Label htmlFor={`edit-cat-${cat.id}`} className="sr-only">Edit Category Name</Label>
-                      <Input
-                        id={`edit-cat-${cat.id}`}
-                        className="flex-1 h-9"
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSaveEdit(cat.id)}
-                        disabled={isSavingEdit === cat.id}
-                        autoFocus
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => handleSaveEdit(cat.id)}
-                        disabled={isSavingEdit === cat.id || !editingName.trim() || editingName === cat.name}
-                        aria-label="Save category name"
-                      >
-                        {isSavingEdit === cat.id ? <Save className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={handleCancelEdit} disabled={isSavingEdit === cat.id} aria-label="Cancel edit">
-                        <X className="h-4 w-4"/>
-                      </Button>
-                    </>
-                  ) : (
-                    // Display Mode
-                    <>
-                      <span className="flex-1 truncate" title={cat.name}>{cat.name}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleStartEdit(cat)}
-                        disabled={!!editingId || !!isDeleting} // Disable if any item is being edited or deleted
-                        aria-label={`Edit ${cat.name}`}
-                       >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                        disabled={!!editingId || !!isDeleting} // Disable if any item is being edited or deleted
-                        aria-label={`Delete ${cat.name}`}
-                       >
-                        {isDeleting === cat.id ? <Save className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
-                      </Button>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div> {/* End Manage Categories Section */}
-
-
-        {/* Account Section */}
-        <div>
-           <h2 className="text-xl font-semibold mb-4">Account</h2>
-           {/* Display logged in user info if user object exists */}
-           {user && (
-              <div className="mb-4 p-4 border rounded-md bg-muted/50">
-                  <p className="text-sm text-muted-foreground">Logged in as:</p>
-                  <p className="font-medium break-all">{user.email}</p> {/* Use break-all for long emails */}
+              {/* Add Category Form */}
+              <div className="flex gap-2 mb-6">
+                <Label htmlFor="new-category-name" className="sr-only">New Category Name</Label>
+                <Input
+                  id="new-category-name"
+                  placeholder="New category name"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+                  disabled={isAdding}
+                  className="flex-1" // Added flex-1
+                />
+                <Button onClick={handleAddCategory} disabled={isAdding || !newCategoryName.trim()}>
+                  {isAdding ? "Adding..." : "Add"}
+                </Button>
               </div>
-           )}
-           {/* Sign Out Button */}
-           <Button
-             variant="outline"
-             onClick={handleSignOut}
-             disabled={isSigningOut}
-             className="w-full sm:w-auto"
-           >
-             <LogOut className="mr-2 h-4 w-4" />
-             {isSigningOut ? "Signing Out..." : "Sign Out"}
-           </Button>
-        </div> {/* End Account Section */}
 
-      </div> {/* End main content wrapper */}
-    </ProtectedRoute> // End ProtectedRoute Wrapper
+              {/* Loading State */}
+              {isLoading && (
+                <div className="space-y-2 border rounded-md p-4">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              )}
+
+              {/* Error State */}
+              {isError && !isLoading && ( // Ensure it only shows on error AND not loading
+                 <p className="text-red-600 px-4 py-4 border rounded-md border-destructive bg-destructive/10">
+                    Error loading categories: {error instanceof Error ? error.message : 'Unknown error'}
+                 </p>
+              )}
+
+              {/* Category List */}
+              {!isLoading && !isError && (
+                <ul className="divide-y divide-border rounded-md border">
+                  {categories.length === 0 && (
+                    <li className="px-4 py-4 text-center text-muted-foreground">
+                       No categories created yet.
+                    </li>
+                  )}
+                  {categories.map((cat) => (
+                    <li key={cat.id} className="flex items-center gap-2 px-4 py-2 hover:bg-muted/50">
+                      {editingId === cat.id ? (
+                        // Edit Mode
+                        <>
+                          <Label htmlFor={`edit-cat-${cat.id}`} className="sr-only">Edit Category Name</Label>
+                          <Input
+                            id={`edit-cat-${cat.id}`}
+                            className="flex-1 h-9"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleSaveEdit(cat.id)}
+                            disabled={isSavingEdit === cat.id}
+                            autoFocus
+                          />
+                          <Button size="sm" onClick={() => handleSaveEdit(cat.id)} disabled={isSavingEdit === cat.id || !editingName.trim() || editingName === cat.name} aria-label="Save category name">
+                            {isSavingEdit === cat.id ? <Save className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={handleCancelEdit} disabled={isSavingEdit === cat.id} aria-label="Cancel edit">
+                            <X className="h-4 w-4"/>
+                          </Button>
+                        </>
+                      ) : (
+                        // Display Mode
+                        <>
+                          <span className="flex-1 truncate" title={cat.name}>{cat.name}</span>
+                          <Button size="sm" variant="ghost" onClick={() => handleStartEdit(cat)} disabled={!!editingId || !!isDeleting} aria-label={`Edit ${cat.name}`}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteCategory(cat.id, cat.name)} disabled={!!editingId || !!isDeleting} aria-label={`Delete ${cat.name}`}>
+                            {isDeleting === cat.id ? <Save className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                          </Button>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Account Tab Content */}
+          <TabsContent value="account" className="border-none p-0 outline-none">
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+              <h2 className="text-xl font-semibold mb-1">Account Information</h2>
+              <p className="text-muted-foreground mb-6">View your account details and sign out.</p>
+              <div className="mb-4 space-y-4"> {/* Added space-y-4 for spacing */}
+                <div> {/* Wrap Label/Input pairs */}
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input id="email" value={user?.email || ""} disabled className="mt-1" />
+                </div>
+                <div> {/* Wrap Label/Input pairs */}
+                    <Label htmlFor="password">Password</Label>
+                    <Input id="password" type="password" value={"********"} disabled className="mt-1" />
+                    {/* Note: Change Password button is currently non-functional */}
+                    <Button variant="outline" className="mt-4" disabled>Change Password</Button>
+                </div>
+              </div>
+              <Button
+                variant="destructive" // Changed from outline to destructive for sign out
+                onClick={handleSignOut}
+                disabled={isSigningOut}
+                className="w-full sm:w-auto" // Added responsive width
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                {isSigningOut ? "Signing Out..." : "Sign Out"}
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* Appearance Tab Content */}
+          <TabsContent value="appearance" className="border-none p-0 outline-none">
+  <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+    <h2 className="text-xl font-semibold mb-1">Appearance</h2>
+    <p className="text-muted-foreground mb-6">Customize how CardTracker looks</p>
+    <h3 className="text-md font-medium mb-4">Theme</h3>
+    <div className="flex flex-col md:flex-row gap-6">
+      {/* Light Theme */}
+      <div className="flex-1 flex flex-col items-center">
+        <div className="w-full h-20 border rounded-md flex items-center justify-center bg-white text-black font-normal text-lg">Light</div>
+        <button className="mt-3 px-6 py-2 rounded-md bg-[#be8c9b] text-white font-medium text-base select-none" disabled>Active</button>
+      </div>
+      {/* Dark Theme */}
+      <div className="flex-1 flex flex-col items-center">
+        <div className="w-full h-20 border rounded-md flex items-center justify-center bg-[#0e1220] text-white font-normal text-lg">Dark</div>
+        <button className="mt-3 px-6 py-2 rounded-md" style={{background:'#F8F2F4', color:'#000', fontWeight:'500', fontSize:'1rem'}} >Select</button>
+      </div>
+      {/* System Theme */}
+      <div className="flex-1 flex flex-col items-center">
+        <div className="w-full h-20 border rounded-md flex items-center justify-center bg-gradient-to-r from-white via-gray-200 to-[#232836] text-black font-normal text-lg">System</div>
+        <button className="mt-3 px-6 py-2 rounded-md" style={{background:'#F8F2F4', color:'#000', fontWeight:'500', fontSize:'1rem'}} >Select</button>
+      </div>
+    </div>
+  </div>
+</TabsContent>
+
+        </Tabs> {/* End Tabs Component */}
+      </div> {/* End container */}
+    </ProtectedRoute>
   );
-}
+} // <-- Make sure this is the VERY LAST closing brace

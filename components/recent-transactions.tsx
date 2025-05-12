@@ -6,6 +6,7 @@ import { Transaction, storage } from "@/lib/storage"
 import { AddTransactionDialog } from "@/components/add-transaction-dialog"
 import { TransactionItem } from "@/components/transaction-item"
 import { Button } from "@/components/ui/button"
+import { AddTransactionButton } from "@/components/add-transaction-button"
 import { PlusCircle } from "lucide-react"
 
 export function RecentTransactions() {
@@ -20,10 +21,7 @@ export function RecentTransactions() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Recent Transactions</h2>
-        <Button onClick={() => setIsAddTransactionOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Transaction
-        </Button>
+        <AddTransactionButton onClick={() => setIsAddTransactionOpen(true)} />
       </div>
       <div className="grid gap-4">
         {(transactions.slice(0, 5)).map((transaction) => (
