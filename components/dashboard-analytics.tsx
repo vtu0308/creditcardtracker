@@ -1,242 +1,226 @@
-import { useMemo } from "react";
+/**
+ * DashboardAnalytics
+ * ------------------
+ * – Fetches transactions & categories once via TanStack Query
+ * – Allows user to pick a time window (7 / 30 / 90 days or All)
+ * – Shows:
+ *     1. Recharts donut (spending by category)
+ *     2. Total-spend summary list
+ */
+"use client";
+import { useState, useMemo } from "react";
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"; // Assuming "./ui/card" is correct path
-import { storage, Transaction, Category } from "@/lib/storage"; // Import full types
+import { useRouter } from "next/navigation";
+import { Card, CardHeader, CardContent, CardTitle } from "./ui/card";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
+import { storage, Transaction, Category } from "@/lib/storage";
 import { formatCurrency } from "@/lib/currency";
-import { ResponsivePie } from "@nivo/pie";
-// Optional: Import a loading spinner component if you have one
-// import { LoadingSpinner } from "./ui/loading-spinner";
+import { SpendingPieChart } from "./SpendingPieChart";
+
+// Category colors for the pie chart
+const CATEGORY_COLORS = [
+  "#CE839C", // Beauty related (darker pink)
+  "#E8B4BC", // Groceries (lighter pink)
+  "#6E4555", // Coffee (dark brown)
+  "#F5E3E0", // Food and Drinks (very light pink)
+  "#FFB5A7", // Subscription (salmon pink)
+  "#FCD5CE", // Transportation (peachy pink)
+  "#F8EDEB", // Additional colors if needed
+  "#F9DCC4",
+  "#FEC89A",
+];
+
+// Time period options for filtering
+const TIME_PERIODS = {
+  "7D": 7,
+  "30D": 30,
+  "90D": 90,
+  "ALL": 0 // 0 days means no date filtering (all time)
+} as const;
+
+type TimePeriod = keyof typeof TIME_PERIODS;
 
 interface DashboardAnalyticsProps {
   className?: string;
 }
 
-// Helper type for the data structure used by the pie chart
-interface PieChartData {
+interface CategoryTotal {
   id: string;
-  label: string;
+  name: string;
   value: number;
-  formattedValue: string;
+  color: string;
 }
 
 export function DashboardAnalytics({ className }: DashboardAnalyticsProps) {
-  // --- Fetch Data using useQuery ---
+  const router = useRouter();
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("30D");
+
+  // Fetch transactions via react-query
   const {
-    data: transactions = [], // Default to empty array
-    isLoading: isLoadingTransactions, // Get loading state
-    isError: isErrorTransactions,     // Get error state
-    // error: transactionsError        // Optional: get error object if needed for specific messages
-  } = useQuery<Transaction[]>({ // Use imported Transaction type
-    queryKey: ['transactions'], // Cache key for transactions
-    queryFn: storage.getTransactions, // Fetch function
-     // Removed initialData: [], as default destructuring and loading state handle this
+    data: transactions = [],
+    isLoading,
+    isError,
+  } = useQuery<Transaction[]>({
+    queryKey: ['transactions'],
+    queryFn: storage.getTransactions,
   });
 
+  // Fetch categories (optional, for better naming)
   const {
-    data: categories = [], // Default to empty array
-    isLoading: isLoadingCategories, // Get loading state
-    isError: isErrorCategories,     // Get error state
-    // error: categoriesError
-  } = useQuery<Category[]>({ // Use imported Category type
-    queryKey: ['categories'], // Cache key for categories
-    queryFn: storage.getCategories, // Fetch function
-     // Removed initialData: []
+    data: categories = [],
+    isError: isErrorCategories,
+  } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: storage.getCategories,
   });
 
-  // --- Calculate Analytics using useMemo (runs only when data changes) ---
-  const { spendingByCategory, totalSpending } = useMemo(() => {
-    console.log("[DashboardAnalytics] Recalculating analytics..."); // For debugging
-
-    // If data isn't loaded yet (though covered by isLoading), return default
-    if (!transactions || !categories) {
-        return { spendingByCategory: [], totalSpending: 0 };
-    }
-
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    thirtyDaysAgo.setHours(0, 0, 0, 0); // Set to start of the day
-
-    // Filter transactions for the last 30 days
-    const recentTransactions = transactions.filter((transaction) => { // Use full Transaction type
+  // Compute category totals whenever timePeriod or transactions change
+  const categoryTotals = useMemo(() => {
+    const days = TIME_PERIODS[timePeriod];
+    const cutoffDate = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : new Date(0);
+    const totals: { [key: string]: { id: string, value: number } } = {};
+    transactions.forEach(transaction => {
+      let transactionDate: Date;
       try {
-        const transactionDate = new Date(transaction.date);
-        // Add basic validation for date object if needed
-        return !isNaN(transactionDate.getTime()) && transactionDate >= thirtyDaysAgo;
-      } catch (e) {
-          console.warn("Error parsing transaction date:", transaction.date, e);
-          return false; // Exclude transactions with invalid dates
+        transactionDate = new Date(transaction.date);
+        if (isNaN(transactionDate.getTime())) return;
+      } catch {
+        return;
+      }
+      if (transactionDate >= cutoffDate) {
+        const categoryName = categories.find((c) => c.id === transaction.categoryId)?.name || transaction.categoryName || 'Uncategorized';
+        const categoryId = transaction.categoryId || 'uncategorized';
+        const amount = typeof transaction.vndAmount === 'number' && !isNaN(transaction.vndAmount)
+          ? transaction.vndAmount : 0;
+        if (!totals[categoryName]) {
+          totals[categoryName] = { id: categoryId, value: 0 };
+        }
+        totals[categoryName].value += amount;
       }
     });
+    return Object.entries(totals)
+      .map(([name, { id, value }], index) => ({
+        id,
+        name,
+        value,
+        color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [timePeriod, transactions, categories]);
 
-    // Calculate total spending (using vndAmount)
-    const total = recentTransactions.reduce((sum, t) => {
-        // Ensure vndAmount is a number before adding
-        return sum + (typeof t.vndAmount === 'number' && !isNaN(t.vndAmount) ? t.vndAmount : 0);
-    }, 0);
+  // Total spending across all categories
+  const totalSpending = useMemo(
+    () => categoryTotals.reduce((sum, c) => sum + c.value, 0),
+    [categoryTotals],
+  );
 
-    // Calculate spending grouped by category name
-    const categorySpending = recentTransactions.reduce((acc, t) => {
-      // Find category name, default to 'Uncategorized'
-      const categoryName = categories.find((c) => c.id === t.categoryId)?.name || 'Uncategorized';
-      const amount = typeof t.vndAmount === 'number' && !isNaN(t.vndAmount) ? t.vndAmount : 0;
-      acc[categoryName] = (acc[categoryName] || 0) + amount;
-      return acc;
-    }, {} as Record<string, number>); // Type assertion for the accumulator
+  // Loading / error / empty states
+  if (isLoading) return <p>Loading…</p>;
+  if (isError || isErrorCategories) return <p>Error loading data</p>;
+  if (!categoryTotals.length)
+    return <p>No spending data for this period</p>;
 
-    // Convert the category spending object into an array format
-    const categoryData = Object.entries(categorySpending)
-        .map(([category, amount]) => ({ category, amount }))
-        .sort((a, b) => b.amount - a.amount); // Optional: Sort categories by amount descending
-
-    return { spendingByCategory: categoryData, totalSpending: total };
-  }, [transactions, categories]); // Dependencies: recalculate only if these change
-
-
-  // --- Handle Loading State ---
-  if (isLoadingTransactions || isLoadingCategories) {
-    return (
-      <div className={`grid gap-4 md:grid-cols-2 ${className}`}>
-        {/* Placeholder for Pie Chart Card */}
-        <Card>
-          <CardHeader><CardTitle>Total Spending by Category</CardTitle></CardHeader>
-          <CardContent className="flex h-[300px] items-center justify-center text-muted-foreground">
-            <p>Loading Analytics...</p>
-            {/* Or use a spinner: <LoadingSpinner /> */}
-          </CardContent>
-        </Card>
-        {/* Placeholder for Summary Card */}
-        <Card>
-          <CardHeader><CardTitle>Spending Summary</CardTitle></CardHeader>
-          <CardContent className="flex h-[200px] items-center justify-center text-muted-foreground">
-             <p>Loading Summary...</p>
-             {/* Or use a spinner */}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // --- Handle Error State ---
-  if (isErrorTransactions || isErrorCategories) {
-     return (
-      <div className={`grid gap-4 md:grid-cols-2 ${className}`}>
-        {/* Error state for Pie Chart Card */}
-        <Card>
-          <CardHeader><CardTitle>Error</CardTitle></CardHeader>
-          <CardContent className="flex h-[300px] items-center justify-center">
-             <p className="text-red-600">Could not load analytics data.</p>
-             {/* Optionally show error details from transactionsError or categoriesError */}
-          </CardContent>
-        </Card>
-        {/* Error state for Summary Card */}
-        <Card>
-          <CardHeader><CardTitle>Error</CardTitle></CardHeader>
-          <CardContent className="flex h-[200px] items-center justify-center">
-             <p className="text-red-600">Could not load summary data.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // --- Render Content (Data loaded successfully) ---
-  // Prepare data for the Pie chart
-  const pieChartData: PieChartData[] = spendingByCategory.map((item) => ({
-        id: item.category,
-        label: item.category, // Label shown on hover/tooltip
-        value: item.amount,
-        formattedValue: formatCurrency(item.amount, "VND") // Used in arcLinkLabel
-      }));
-
+  // Render
   return (
-    <div className={`grid gap-4 md:grid-cols-2 ${className}`}>
-      {/* Pie Chart Card */}
+    <div className={`w-full space-y-4 ${className || ""}`}>
+      {/* header + dropdown */}
+      <div className="flex flex-col gap-1.5">
+        <div>
+          <div className="space-y-1">
+            <h2 className="text-2xl font-semibold tracking-tight">Spending Analytics</h2>
+            <p className="text-muted-foreground text-sm">Your spending breakdown by category</p>
+          </div>
+        </div>
+        <Select value={timePeriod} onValueChange={v => setTimePeriod(v as TimePeriod)}>
+          <SelectTrigger className="w-full bg-background/50">
+            <SelectValue>
+              {timePeriod === "ALL"
+                ? "All time"
+                : `Last ${TIME_PERIODS[timePeriod]} days`}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7D">Last 7 days</SelectItem>
+            <SelectItem value="30D">Last 30 days</SelectItem>
+            <SelectItem value="90D">Last 90 days</SelectItem>
+            <SelectItem value="ALL">All time</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Pie chart card */}
       <Card>
         <CardHeader>
-          <CardTitle>Total Spending by Category (Last 30 Days)</CardTitle>
+          <div className="space-y-1">
+            <CardTitle>Total Spending by Category</CardTitle>
+            <p className="text-muted-foreground text-sm">Your spending breakdown by category</p>
+          </div>
         </CardHeader>
         <CardContent>
-           {/* Conditionally render chart or 'no data' message */}
-           {pieChartData.length > 0 ? (
-             <div className="h-[300px]">
-               <ResponsivePie
-                 data={pieChartData} // Use prepared data
-                 margin={{ top: 20, right: 20, bottom: 40, left: 20 }} // Adjusted margins slightly
-                 innerRadius={0.6}
-                 padAngle={0.7} // Slightly increased padAngle
-                 cornerRadius={3}
-                 activeOuterRadiusOffset={8}
-                 // Define consistent colors or use a scheme
-                 colors={{ scheme: 'pastel1' }} // Example Nivo color scheme
-                 // Or use your custom colors: colors={['#E8B4BC', '#D282A6', ...more colors if needed]}
-                 borderWidth={1}
-                 borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
-                 // Arc Link Labels (Lines pointing to slices)
-                 arcLinkLabelsSkipAngle={10}
-                 arcLinkLabelsTextColor="#333333" // Darker text for better contrast
-                 arcLinkLabelsThickness={2}
-                 arcLinkLabelsColor={{ from: 'color' }}
-                 arcLinkLabel={datum => `${datum.id}: ${datum.formattedValue}`} // Show name and formatted value
-                 // Arc Labels (Text inside slices - disabled as they often overlap)
-                 enableArcLabels={false}
-                 arcLabelsSkipAngle={10}
-                 arcLabelsTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
-                 // Tooltip configuration
-                 tooltip={({ datum }) => ( // Custom tooltip for better formatting
-                    <div style={{ background: 'white', padding: '9px 12px', border: '1px solid #ccc', fontSize: '14px' }}>
-                        <strong>{datum.id}</strong>: {datum.formattedValue}<br />
-                        ({((datum.value / totalSpending) * 100).toFixed(1)}%) {/* Show percentage */}
-                    </div>
-                 )}
-                 // Legends (Keys below chart - can be useful if many categories)
-                 legends={[
-                    // { /* Optional Legend Configuration */ }
-                 ]}
-               />
-             </div>
-           ) : (
-             // Message when there's no spending data for the period
-             <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-               No spending data found for the last 30 days.
-             </div>
-           )}
+          <div className="w-full flex flex-col items-center py-4">
+            <div className="relative w-full aspect-square max-w-[220px] mx-auto mb-8">
+              <SpendingPieChart
+                categoryTotals={categoryTotals}
+                colors={CATEGORY_COLORS}
+              />
+            </div>
+            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mt-3 text-xs sm:text-sm">
+              {categoryTotals.slice(0, 6).map(ct => (
+                <div key={ct.id} className="flex items-center gap-1.5 sm:gap-2">
+                  <span
+                    className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                    style={{ backgroundColor: ct.color }}
+                  />
+                  <span className="text-muted-foreground truncate max-w-[70px] sm:max-w-[90px]">{ct.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Summary Card */}
-      <Card>
+      {/* Summary card */}
+      <Card className="mt-4">
         <CardHeader>
-          <CardTitle>Spending Summary (Last 30 Days)</CardTitle>
+          <div className="space-y-1">
+            <CardTitle>Spending Summary</CardTitle>
+            <p className="text-muted-foreground text-sm">
+              Your spending overview for {timePeriod === "ALL" ? "all time" : `the last ${TIME_PERIODS[timePeriod]} days`}
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {/* Total Spending Display */}
-            <div>
-              <div className="text-sm text-muted-foreground">Total Spending</div>
-              <div className="text-2xl font-bold">{formatCurrency(totalSpending, "VND")}</div>
-            </div>
-            {/* Category Breakdown List */}
-            <div className="space-y-2">
-               <h4 className="text-sm font-medium text-muted-foreground pt-2">By Category:</h4>
-               {spendingByCategory.length > 0 ? (
-                 spendingByCategory.map((item, index) => (
-                   <div key={item.category} className="flex items-center justify-between">
-                     <div className="flex items-center gap-2">
-                        {/* Use chart colors for consistency if possible, requires mapping */}
-                       <div className={`w-3 h-3 rounded-full ${ index % 2 === 0 ? 'bg-[#E8B4BC]' : 'bg-[#D282A6]'}`} /> {/* Simple color cycling */}
-                       <span className="text-sm font-medium truncate max-w-[150px]">{item.category}</span> {/* Prevent long names breaking layout */}
-                     </div>
-                     <span className="text-sm text-muted-foreground">
-                       {formatCurrency(item.amount, "VND")}
-                     </span>
-                   </div>
-                 ))
-               ) : (
-                 // Message when no categories have spending
-                 <p className="text-sm text-muted-foreground">No spending data by category.</p>
-               )}
-            </div>
+          <div className="flex flex-col gap-0.5 mb-2">
+            <div className="text-muted-foreground text-sm font-medium">Total Spending ({timePeriod === "ALL" ? "All time" : `Last ${TIME_PERIODS[timePeriod]} Days`})</div>
+            <span className="text-2xl font-bold">{formatCurrency(totalSpending, "VND")}</span>
           </div>
+          <div className="mb-2 mt-4 text-muted-foreground text-sm font-medium">By Category:</div>
+          {categoryTotals.length > 0 ? (
+            categoryTotals.map(ct => (
+              <div
+                key={ct.id}
+                className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
+                onClick={() =>
+                  router.push(
+                    `/transactions?category=${encodeURIComponent(ct.id)}&period=${timePeriod}`
+                  )
+                }
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: ct.color }}
+                  />
+                  <span className="text-sm font-medium truncate max-w-[150px]">{ct.name}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {formatCurrency(ct.value, "VND")}
+                </span>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">No spending data by category.</p>
+          )}
         </CardContent>
       </Card>
     </div>

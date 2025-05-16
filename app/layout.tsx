@@ -38,9 +38,9 @@ export default function RootLayout({
             {/* ClientLayout kept assuming it's needed */}
             <ClientLayout>
               <MainNav /> {/* Render the refactored MainNav */}
-              <main className="py-6 sm:py-8"> {/* Adjusted padding slightly, check visuals */}
+              <main className="py-6 sm:py-8">
                 {/* Container for page content */}
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div className="px-4 sm:px-6">
                   {children}
                 </div>
               </main>
