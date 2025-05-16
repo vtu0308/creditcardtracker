@@ -64,66 +64,61 @@ export function MainNav() {
   return (
     <header className="sticky top-0 z-40 w-full border-b-4" style={{ borderColor: 'hsl(340, 43%, 66%)' }}>
       <div className="w-full bg-background">
-        <div className="mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Left Column: Logo */}
-          <div className="flex items-center justify-self-start">
+          {/* Left: Logo and Desktop Nav */}
+          <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <span className="flex items-center justify-center h-10 w-10 rounded-lg" style={{ background: "hsl(340, 43%, 66%)" }}>
                 <CreditCard className="h-6 w-6 text-white" />
               </span>
-              <span className="hidden font-bold text-black sm:inline-block">CardTracker</span>
-              <span className="sm:hidden font-bold text-black">CT</span>
+              <span className="font-bold text-black">CardTracker</span>
             </Link>
+            <nav className="hidden md:flex md:items-center md:ml-8 space-x-1 lg:space-x-2">
+              {navItems.map((item) => (
+                <NavLink key={`desktop-${item.href}`} item={item} />
+              ))}
+            </nav>
           </div>
 
-          {/* Center Column: Desktop Navigation */}
-          <nav className="hidden md:flex md:items-center md:justify-self-center md:space-x-1 lg:space-x-2">
-            {navItems.map((item) => (
-              <NavLink key={`desktop-${item.href}`} item={item} />
-            ))}
-          </nav>
-
-          {/* Right Column: Mobile Menu Trigger & Future Theme Toggle */}
-          <div className="flex items-center justify-self-end gap-2">
-            {/* Placeholder for Theme Toggle Button */}
+          {/* Right: Theme Toggle and Mobile Menu */}
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle Button */}
             <Button variant="ghost" size="icon" disabled>
               <Sun className="h-5 w-5 text-muted-foreground" />
             </Button>
 
             {/* Mobile Menu Trigger */}
-            <div className="md:hidden">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Open main menu">
-                    <Menu className="h-6 w-6" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left">
-                  <SheetHeader className="border-b border-border pb-4 mb-4">
-                    <SheetTitle className="text-left">
-                      <Link href="/" className="flex items-center space-x-2">
-                        <span className="flex items-center justify-center h-10 w-10 rounded-lg" style={{ background: "hsl(340, 43%, 66%)", color: "white" }}>
-                          <CreditCard className="h-6 w-6" />
-                        </span>
-                        <span className="text-base font-semibold">CardTracker</span>
-                      </Link>
-                    </SheetTitle>
-                    <SheetDescription className="text-left text-sm text-muted-foreground pt-1">
-                      Navigate through your CardTracker application.
-                    </SheetDescription>
-                  </SheetHeader>
-                  <nav className="flex flex-col gap-2">
-                    {navItems.map((item) => (
-                      <NavLink key={`mobile-${item.href}`} item={item} isMobile={true} />
-                    ))}
-                  </nav>
-                </SheetContent>
-              </Sheet>
-            </div> {/* End Mobile Menu Trigger div */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Open main menu" className="md:hidden">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left">
+                <SheetHeader className="border-b border-border pb-4 mb-4">
+                  <SheetTitle className="text-left">
+                    <Link href="/" className="flex items-center space-x-2">
+                      <span className="flex items-center justify-center h-10 w-10 rounded-lg" style={{ background: "hsl(340, 43%, 66%)", color: "white" }}>
+                        <CreditCard className="h-6 w-6" />
+                      </span>
+                      <span className="text-base font-semibold">CardTracker</span>
+                    </Link>
+                  </SheetTitle>
+                  <SheetDescription className="text-left text-sm text-muted-foreground pt-1">
+                    Navigate through your CardTracker application.
+                  </SheetDescription>
+                </SheetHeader>
+                <nav className="flex flex-col gap-2">
+                  {navItems.map((item) => (
+                    <NavLink key={`mobile-${item.href}`} item={item} isMobile={true} />
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div> {/* End Right Column div */}
-
         </div> {/* End Grid div */}
       </div> {/* End Background div */}
-    </header> // End Header tag
+    </header>
   );
 }
