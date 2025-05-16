@@ -127,7 +127,7 @@ export function DashboardAnalytics({ className }: DashboardAnalyticsProps) {
       <div className="flex flex-col gap-1.5">
         <div>
           <div className="space-y-1">
-            <h2 className="text-2xl font-semibold tracking-tight">Spending Analytics</h2>
+            <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Spending Analytics</h2>
             <p className="text-muted-foreground text-sm">Your spending breakdown by category</p>
           </div>
         </div>
@@ -152,7 +152,7 @@ export function DashboardAnalytics({ className }: DashboardAnalyticsProps) {
       <Card>
         <CardHeader>
           <div className="space-y-1">
-            <CardTitle>Total Spending by Category</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Total Spending by Category</CardTitle>
             <p className="text-muted-foreground text-sm">Your spending breakdown by category</p>
           </div>
         </CardHeader>
@@ -183,7 +183,7 @@ export function DashboardAnalytics({ className }: DashboardAnalyticsProps) {
       <Card className="mt-4">
         <CardHeader>
           <div className="space-y-1">
-            <CardTitle>Spending Summary</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Spending Summary</CardTitle>
             <p className="text-muted-foreground text-sm">
               Your spending overview for {timePeriod === "ALL" ? "all time" : `the last ${TIME_PERIODS[timePeriod]} days`}
             </p>
