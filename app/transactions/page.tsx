@@ -16,6 +16,8 @@ import { Search } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useSearchParams } from "next/navigation"; // Make sure this import is present
+import { X } from "lucide-react"
+import { FilterBadge } from "@/components/transaction-page/filter-badge"
 
 // --- Utility: Group transactions by date and label (Today, Yesterday, Date) ---
 // (Keep your existing groupTransactionsByDate function here)
@@ -62,6 +64,21 @@ export default function TransactionsPage() {
 }
 
 
+function applyQuickDateFilter(period: "1D"|"7D"|"30D"|"90D") {
+  const today = new Date();
+  let from = new Date(today);
+  switch(period) {
+    case "1D": /* keep from = today */; break;
+    case "7D": from.setDate(today.getDate() - 6); break;
+    case "30D": from.setDate(today.getDate() - 29); break;
+    case "90D": from.setDate(today.getDate() - 89); break;
+  }
+  return {
+    from: from.toISOString().slice(0,10),
+    to: today.toISOString().slice(0,10)
+  };
+}
+
 function TransactionsContent() {
   // --- State for UI controls ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,7 +96,11 @@ function TransactionsContent() {
     const urlCategory = searchParams.get('category') || '';
     const urlPeriod = searchParams.get('period') || '';
     setSelectedCategory(urlCategory);
-    if (urlPeriod === '7D') {
+    if (urlPeriod === '1D') {
+      const today = new Date();
+      setDateFrom(today.toISOString().slice(0, 10));
+      setDateTo(today.toISOString().slice(0, 10));
+    } else if (urlPeriod === '7D') {
       const today = new Date();
       const from = new Date();
       from.setDate(today.getDate() - 6);
@@ -278,12 +299,111 @@ function TransactionsContent() {
              />
           </div>
 
+          {/* ─── Active Filters + Clear All ─────────────────────────── */}
+          {(selectedCategory || selectedCard || dateFrom) && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {selectedCategory && (
+                <FilterBadge
+                  label="Category"
+                  value={categories.find(c=>c.id===selectedCategory)?.name || "—"}
+                  onRemove={() => setSelectedCategory("")}
+                />
+              )}
+              {selectedCard && (
+                <FilterBadge
+                  label="Card"
+                  value={cards.find(c=>c.id===selectedCard)?.name || "—"}
+                  onRemove={() => setSelectedCard("")}
+                />
+              )}
+              {(dateFrom || dateTo) && (
+                <FilterBadge
+                  label="Period"
+                  value={
+                    dateFrom === dateTo
+                      ? "Today"
+                      : `${dateFrom} ↔ ${dateTo}`
+                  }
+                  onRemove={() => { setDateFrom(""); setDateTo(""); }}
+                />
+              )}
+
+              <button
+                className="ml-auto flex items-center text-sm font-medium text-primary hover:underline"
+                onClick={() => {
+                  setSelectedCategory("");
+                  setSelectedCard("");
+                  setDateFrom("");
+                  setDateTo("");
+                }}
+              >
+                Clear All <X className="ml-1 h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* ─── Quick Date Filters ──────────────────────────────────── */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const dates = applyQuickDateFilter("1D");
+                setDateFrom(dates.from);
+                setDateTo(dates.to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            >
+              Today
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const dates = applyQuickDateFilter("7D");
+                setDateFrom(dates.from);
+                setDateTo(dates.to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            >
+              This Week
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const dates = applyQuickDateFilter("30D");
+                setDateFrom(dates.from);
+                setDateTo(dates.to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            >
+              This Month
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const dates = applyQuickDateFilter("90D");
+                setDateFrom(dates.from);
+                setDateTo(dates.to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            >
+              Last 3 Months
+            </Button>
+          </div>
+
           {/* Transaction List with Date Headers */}
           <div className="space-y-4">
             {groupTransactionsByDate(filteredTransactions, new Date()).map(({ label, transactions }) => (
               <div key={label}>
                 {/* Date Header - MODIFIED */}
-                <div className="rounded-md bg-muted px-4 py-2 text-sm font-semibold text-muted-foreground mb-2"> {/* <-- CHANGED STYLING HERE */}
+                <div className="rounded-md bg-primary/5 border border-primary/10 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-muted-foreground mb-2"> {/* <-- CHANGED STYLING HERE */}
                   {label}
                 </div>
                 <div className="space-y-4">

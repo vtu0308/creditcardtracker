@@ -64,9 +64,9 @@ export function MainNav() {
   return (
     <header className="sticky top-0 z-40 w-full border-b-4" style={{ borderColor: 'hsl(340, 43%, 66%)' }}>
       <div className="w-full bg-background">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-8 px-4 sm:px-6 lg:px-8">
           {/* Left Column: Logo */}
-          {/* Left: Logo and Desktop Nav */}
+          {/* Left: Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <span className="flex items-center justify-center h-10 w-10 rounded-lg" style={{ background: "hsl(340, 43%, 66%)" }}>
@@ -74,12 +74,14 @@ export function MainNav() {
               </span>
               <span className="font-bold text-black">CardTracker</span>
             </Link>
-            <nav className="hidden md:flex md:items-center md:ml-8 space-x-1 lg:space-x-2">
-              {navItems.map((item) => (
-                <NavLink key={`desktop-${item.href}`} item={item} />
-              ))}
-            </nav>
           </div>
+
+          {/* Center: Desktop Nav */}
+          <nav className="hidden md:flex md:items-center space-x-1 lg:space-x-2">
+            {navItems.map((item) => (
+              <NavLink key={`desktop-${item.href}`} item={item} />
+            ))}
+          </nav>
 
           {/* Right: Theme Toggle and Mobile Menu */}
           <div className="flex items-center gap-2">
