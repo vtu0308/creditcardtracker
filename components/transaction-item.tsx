@@ -46,7 +46,7 @@ export function TransactionItem({
         }`}
       >
         <CardContent
-          className={`flex items-center justify-between ${
+          className={`relative flex items-center justify-between ${
             isMobile ? 'p-2' : 'p-4'
           } gap-2`}
         >
@@ -79,46 +79,67 @@ export function TransactionItem({
                 {transaction.description}
               </p>
 
-              {/* Card name + category badge + date */}
-              <div
-                className={`flex items-center gap-3 ${
-                  isMobile ? 'text-[10px]' : 'text-xs'
-                } text-[#88848F]`}
-              >
-                {/* NEW: Card icon + card name, no truncation */}
-                <div className="flex items-center gap-1">
-                  <CardIcon
-                    className={isMobile ? 'h-3 w-3' : 'h-4 w-4'}
-                    style={{ color: 'inherit' }}
-                  />
+              {isMobile ? (
+                /* Mobile: Three-line layout */
+                <div className="space-y-1 text-[10px] text-[#88848F]">
+                  {/* Line 2: Card name only */}
+                  <div className="flex items-center">
+                    {/* Card icon + name */}
+                    <div className="flex items-center gap-1">
+                      <CardIcon className="h-3 w-3" style={{ color: 'inherit' }} />
+                      <span className="font-normal text-muted-foreground">
+                        {transaction.cardName}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Line 3: Date + Category */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Date */}
+                    <span className="text-[10px] whitespace-nowrap">
+                      {new Date(transaction.date).toLocaleDateString()}
+                    </span>
+
+                    {/* Category badge */}
+                    <span
+                      className="rounded-full bg-[#F3E2E7] px-1.5 py-0.5 text-[#C58B9F] text-[9px] font-medium whitespace-nowrap"
+                      style={{ lineHeight: '1.1' }}
+                    >
+                      {transaction.categoryName}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Desktop: Single-line layout */
+                <div className="flex items-center gap-3 text-xs text-[#88848F]">
+                  {/* Card icon + name */}
+                  <div className="flex items-center gap-1">
+                    <CardIcon className="h-4 w-4" style={{ color: 'inherit' }} />
+                    <span className="font-normal text-muted-foreground">
+                      {transaction.cardName}
+                    </span>
+                  </div>
+
+                  {/* Category badge */}
                   <span
-                    className={`font-normal ${
-                      isMobile ? 'text-[10px]' : 'text-xs'
-                    } text-muted-foreground`}
+                    className="rounded-full bg-[#F3E2E7] px-2 py-0.5 text-[#C58B9F] text-xs font-semibold"
+                    style={{ lineHeight: '1.2' }}
                   >
-                    {transaction.cardName}
+                    {transaction.categoryName}
+                  </span>
+
+                  {/* Date */}
+                  <span>
+                    {new Date(transaction.date).toLocaleDateString()}
                   </span>
                 </div>
-
-                {/* Category badge */}
-                <span
-                  className="rounded-full bg-[#F3E2E7] px-2 py-0.5 text-[#C58B9F] text-xs font-semibold"
-                  style={{ lineHeight: '1.2' }}
-                >
-                  {transaction.categoryName}
-                </span>
-
-                {/* Date */}
-                <span>
-                  {new Date(transaction.date).toLocaleDateString()}
-                </span>
-              </div>
+              )}
             </div>
           </div>
 
           {/* Right side: amounts + edit button */}
           <div className="flex items-start gap-2 flex-shrink-0">
-            <div className="text-right">
+            <div className={`text-right ${!showBothAmounts ? 'self-center' : ''} group-hover:mr-8`}>
               <p
                 className={`font-medium text-[#6E4555] ${
                   isMobile ? 'text-sm' : ''
@@ -143,7 +164,7 @@ export function TransactionItem({
             <Button
               variant="ghost"
               size="icon"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 absolute right-2"
               onClick={() => setIsEditOpen(true)}
             >
               <Pencil className="h-4 w-4" />

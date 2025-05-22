@@ -18,39 +18,62 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useSearchParams } from "next/navigation"; // Make sure this import is present
 import { X } from "lucide-react"
 import { FilterBadge } from "@/components/transaction-page/filter-badge"
+import { TransactionMonthSection } from "@/components/transaction-month-section"
 
-// --- Utility: Group transactions by date and label (Today, Yesterday, Date) ---
-// (Keep your existing groupTransactionsByDate function here)
-function groupTransactionsByDate(transactions: Transaction[], now: Date) {
+// --- Utility: Group transactions by month and date ---
+function groupTransactionsByMonthAndDate(transactions: Transaction[]) {
   const formatLocalYMD = (date: Date) => {
     const y = date.getFullYear();
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
     const d = date.getDate().toString().padStart(2, '0');
     return `${y}-${m}-${d}`;
   };
-  const formatHeader = (date: Date) => date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 
-  const todayYMD = formatLocalYMD(now);
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  const yesterdayYMD = formatLocalYMD(yesterday);
+  const formatMonthYear = (date: Date) => {
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+  };
 
-  const groups: Record<string, Transaction[]> = {};
+  const formatDayHeader = (date: Date, now: Date) => {
+    const dateYMD = formatLocalYMD(date);
+    const todayYMD = formatLocalYMD(now);
+    const yesterdayDate = new Date(now);
+    yesterdayDate.setDate(now.getDate() - 1);
+    const yesterdayYMD = formatLocalYMD(yesterdayDate);
+
+    if (dateYMD === todayYMD) return 'Today';
+    if (dateYMD === yesterdayYMD) return 'Yesterday';
+    return date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  };
+
+  // First, group by month-year
+  const monthGroups: Record<string, Record<string, Transaction[]>> = {};
+  const now = new Date();
+
   transactions.forEach(tx => {
     const txDate = new Date(tx.date);
-    const txYMD = formatLocalYMD(txDate);
-    if (!groups[txYMD]) groups[txYMD] = [];
-    groups[txYMD].push(tx);
+    const monthKey = `${txDate.getFullYear()}-${(txDate.getMonth() + 1).toString().padStart(2, '0')}`;
+    const dayKey = formatLocalYMD(txDate);
+
+    if (!monthGroups[monthKey]) monthGroups[monthKey] = {};
+    if (!monthGroups[monthKey][dayKey]) monthGroups[monthKey][dayKey] = [];
+    monthGroups[monthKey][dayKey].push(tx);
   });
 
-  const sortedKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
-
-  return sortedKeys.map(dateYMD => {
-    let label = formatHeader(new Date(dateYMD + 'T00:00:00')); // Ensure correct date parsing for header
-    if (dateYMD === todayYMD) label = 'Today';
-    else if (dateYMD === yesterdayYMD) label = 'Yesterday';
-    return { label, transactions: groups[dateYMD] };
-  });
+  // Convert to final structure
+  return Object.entries(monthGroups)
+    .sort(([a], [b]) => b.localeCompare(a)) // Sort months newest first
+    .map(([monthKey, dayGroups]) => {
+      const monthDate = new Date(monthKey + '-01'); // First day of month
+      return {
+        monthLabel: formatMonthYear(monthDate),
+        dayGroups: Object.entries(dayGroups)
+          .sort(([a], [b]) => b.localeCompare(a)) // Sort days newest first
+          .map(([dayKey, transactions]) => ({
+            label: formatDayHeader(new Date(dayKey), now),
+            transactions
+          }))
+      };
+    });
 }
 
 
@@ -205,11 +228,11 @@ function TransactionsContent() {
   if (isLoading) {
      // Keep your existing Skeleton loading state
      return (
-        <div className="container py-6 space-y-6">
+        <div className="space-y-4 p-4 md:p-6">
            <div className="flex items-center justify-between">
               <div> <Skeleton className="h-8 w-40 mb-2" /> <Skeleton className="h-4 w-64" /> </div>
            </div>
-           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 space-y-4">
+           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 md:p-6 space-y-4">
               <div className="flex justify-between items-center mb-4"> <Skeleton className="h-8 w-48" /> <Skeleton className="h-10 w-40" /> </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 items-end"> <Skeleton className="h-16 w-full" /> <Skeleton className="h-16 w-full" /> <Skeleton className="h-16 w-full" /> <Skeleton className="h-16 w-full" /> </div>
               <Skeleton className="h-10 w-full mb-6" /> {/* Adjusted skeleton for full width search */}
@@ -223,7 +246,7 @@ function TransactionsContent() {
   if (isError) {
       // Keep your existing Error state
        return (
-          <div className="container py-6 space-y-6">
+          <div className="space-y-4 p-2 md:p-4">
              <div className="flex items-center justify-between">
                 <div> <h1 className="text-2xl font-bold tracking-tight text-red-600">Error Loading Data</h1> <p className="text-muted-foreground"> Could not load page data. Please try again later. </p> {error && <p className="text-sm text-red-500 mt-2">Details: {error.message}</p>} </div>
              </div>
@@ -233,7 +256,7 @@ function TransactionsContent() {
 
   // --- Render Main Content ---
   return (
-    <div className="container py-6 space-y-6">
+    <div className="space-y-4 p-2 md:p-4">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -245,8 +268,9 @@ function TransactionsContent() {
       </div>
 
       {/* Main Content Card */}
-      <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-        <div className="p-6">
+      <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-2 md:p-4">
+        {/* Inner Content Container */}
+        <div className="px-1 md:px-2">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
              <div>
                 <h2 className="text-xl font-semibold tracking-tight">Transaction History</h2>
@@ -398,20 +422,14 @@ function TransactionsContent() {
             </Button>
           </div>
 
-          {/* Transaction List with Date Headers */}
-          <div className="space-y-4">
-            {groupTransactionsByDate(filteredTransactions, new Date()).map(({ label, transactions }) => (
-              <div key={label}>
-                {/* Date Header - MODIFIED */}
-                <div className="rounded-md bg-primary/5 border border-primary/10 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-muted-foreground mb-2"> {/* <-- CHANGED STYLING HERE */}
-                  {label}
-                </div>
-                <div className="space-y-4">
-                  {transactions.map(transaction => (
-                    <TransactionItem key={transaction.id} transaction={transaction} />
-                  ))}
-                </div>
-              </div>
+          {/* Transaction List with Month Sections */}
+          <div className="space-y-6">
+            {groupTransactionsByMonthAndDate(filteredTransactions).map(({ monthLabel, dayGroups }) => (
+              <TransactionMonthSection
+                key={monthLabel}
+                monthLabel={monthLabel}
+                dayGroups={dayGroups}
+              />
             ))}
             {/* Empty State Message */}
             {filteredTransactions.length === 0 && !isLoading && ( // Added !isLoading check
