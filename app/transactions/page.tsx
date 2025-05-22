@@ -19,6 +19,7 @@ import { useSearchParams } from "next/navigation"; // Make sure this import is p
 import { X } from "lucide-react"
 import { FilterBadge } from "@/components/transaction-page/filter-badge"
 import { TransactionMonthSection } from "@/components/transaction-month-section"
+import { SpendingTrendsChart } from "@/components/spending-trends-chart"
 
 // --- Utility: Group transactions by month and date ---
 function groupTransactionsByMonthAndDate(transactions: Transaction[]) {
@@ -109,6 +110,7 @@ function TransactionsContent() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const [chartViewMode, setChartViewMode] = useState<"day" | "week" | "month">("day");
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
 
   // --- Read filters from URL query params ---
@@ -422,8 +424,66 @@ function TransactionsContent() {
             </Button>
           </div>
 
+          {/* Spending Trends Chart */}
+          <div className="w-full rounded-lg border bg-[#FDF9FA] text-card-foreground shadow-sm p-4 sm:p-6 mt-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 mb-4">
+              <div>
+                <h2 className="text-lg font-semibold">Spending Trends</h2>
+                <p className="text-sm text-muted-foreground">
+                  {chartViewMode === "day" && "Daily"}
+                  {chartViewMode === "week" && "Weekly"}
+                  {chartViewMode === "month" && "Monthly"}
+                  {" spending for the selected period"}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 bg-white/50 rounded-lg p-1 self-start sm:self-auto">
+                <Button
+                  variant={chartViewMode === "day" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setChartViewMode("day")}
+                  className={chartViewMode === "day" ? "bg-white" : "hover:bg-white/50"}
+                >
+                  Day
+                </Button>
+                <Button
+                  variant={chartViewMode === "week" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setChartViewMode("week")}
+                  className={chartViewMode === "week" ? "bg-white" : "hover:bg-white/50"}
+                >
+                  Week
+                </Button>
+                <Button
+                  variant={chartViewMode === "month" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setChartViewMode("month")}
+                  className={chartViewMode === "month" ? "bg-white" : "hover:bg-white/50"}
+                >
+                  Month
+                </Button>
+              </div>
+            </div>
+            <SpendingTrendsChart
+              transactions={filteredTransactions}
+              filterPeriod={dateTo && dateFrom
+                ? Math.abs(new Date(dateTo).getTime() - new Date(dateFrom).getTime()) / (1000 * 60 * 60 * 24) > 60
+                  ? "month"
+                  : Math.abs(new Date(dateTo).getTime() - new Date(dateFrom).getTime()) / (1000 * 60 * 60 * 24) > 14
+                    ? "week"
+                    : "day"
+                : "day"}
+              viewMode={chartViewMode}
+              onFilterChange={(from, to) => {
+                setDateFrom(from);
+                setDateTo(to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            />
+          </div>
+
           {/* Transaction List with Month Sections */}
-          <div className="space-y-6">
+          <div className="space-y-6 mt-8">
             {groupTransactionsByMonthAndDate(filteredTransactions).map(({ monthLabel, dayGroups }) => (
               <TransactionMonthSection
                 key={monthLabel}
