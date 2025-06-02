@@ -1,14 +1,16 @@
 "use client"
 
-import { useState } from "react"; // Removed useEffect
-import { useQuery } from '@tanstack/react-query'; // Import useQuery
-import { storage, Card } from "@/lib/storage"; // Import Card type
+import { useState } from "react";
+import { useQuery } from '@tanstack/react-query';
+import { storage, Card } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { AddCardButton } from "@/components/add-card-button";
 import { PlusCircle } from "lucide-react";
 import { AddCardDialog } from "@/components/add-card-dialog";
 import { CardItem } from "@/components/card-item";
-import { Skeleton } from "@/components/ui/skeleton"; // For loading state
+import { Skeleton } from "@/components/ui/skeleton";
+import { TimeFilter, TimeFilterPeriod } from "@/components/time-filter";
+import { isTransactionInPeriod } from "@/lib/date-utils";
 
 import { ProtectedRoute } from "@/components/auth/protected-route";
 
@@ -21,19 +23,22 @@ export default function CardsPage() {
 }
 
 function CardsContent() {
-  // State for controlling the Add Card dialog visibility
   const [isAddCardOpen, setIsAddCardOpen] = useState(false);
-  // REMOVED: useState for cards list
+  const [timePeriod, setTimePeriod] = useState<TimeFilterPeriod>("all");
 
-  // --- Fetch Cards using useQuery ---
   const {
-    data: cards = [], // Default to empty array while loading/if no data
-    isLoading,        // Loading state flag
-    isError,          // Error state flag
-    error,            // Optional: Access the error object for details
+    data: cards = [],
+    isLoading,
+    isError,
+    error,
   } = useQuery<Card[]>({
-    queryKey: ['cards'], // Use the consistent query key for cards
-    queryFn: storage.getCards, // The async function to fetch cards
+    queryKey: ['cards'],
+    queryFn: storage.getCards,
+  });
+
+  const { data: transactions = [] } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: storage.getTransactions,
   });
 
   // --- Render Loading State ---
@@ -90,20 +95,31 @@ function CardsContent() {
             View and manage your credit cards
           </p>
         </div>
-        <AddCardButton onClick={() => setIsAddCardOpen(true)} />
+        <div className="flex items-center gap-4">
+          <TimeFilter
+            selected={timePeriod}
+            onChange={setTimePeriod}
+          />
+          <AddCardButton onClick={() => setIsAddCardOpen(true)} />
+        </div>
       </div>
 
       {/* Card Grid or Empty State */}
       {cards.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Map over the 'cards' data fetched by useQuery */}
-          {cards.map((card) => (
-            <CardItem
-              key={card.id}
-              card={card}
-              // REMOVED: onDelete prop - EditCardDialog within CardItem handles invalidation now
-            />
-          ))}
+          {cards.map((card) => {
+            const cardTransactions = transactions.filter(tx => 
+              tx.cardId === card.id && isTransactionInPeriod(tx.date, timePeriod)
+            );
+            return (
+              <CardItem
+                key={card.id}
+                card={card}
+                transactions={cardTransactions}
+              />
+            );
+          })}
         </div>
       ) : (
         // Empty State

@@ -121,36 +121,46 @@ function TransactionsContent() {
     const urlCategory = searchParams.get('category') || '';
     const urlPeriod = searchParams.get('period') || '';
     setSelectedCategory(urlCategory);
+
+    const today = new Date();
+    let fromDate = new Date(today);
+    let toDate = new Date(today);
+
     if (urlPeriod === '1D') {
-      const today = new Date();
-      setDateFrom(today.toISOString().slice(0, 10));
-      setDateTo(today.toISOString().slice(0, 10));
+      // Handled by default fromDate, toDate initialization to today
+    } else if (urlPeriod === 'week') {
+      const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1, ..., Saturday - 6
+      const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday
+      fromDate = new Date(today.setDate(diffToMonday));
+      
+      const diffToSunday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? 0 : 7); // Adjust for Sunday
+      toDate = new Date(new Date().setDate(diffToSunday)); // Use new Date() to avoid mutation from fromDate calculation
+    } else if (urlPeriod === 'month') {
+      fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      toDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
     } else if (urlPeriod === '7D') {
-      const today = new Date();
-      const from = new Date();
-      from.setDate(today.getDate() - 6);
-      setDateFrom(from.toISOString().slice(0, 10));
-      setDateTo(today.toISOString().slice(0, 10));
+      fromDate.setDate(today.getDate() - 6);
     } else if (urlPeriod === '30D') {
-      const today = new Date();
-      const from = new Date();
-      from.setDate(today.getDate() - 29);
-      setDateFrom(from.toISOString().slice(0, 10));
-      setDateTo(today.toISOString().slice(0, 10));
+      fromDate.setDate(today.getDate() - 29);
     } else if (urlPeriod === '90D') {
-      const today = new Date();
-      const from = new Date();
-      from.setDate(today.getDate() - 89);
-      setDateFrom(from.toISOString().slice(0, 10));
-      setDateTo(today.toISOString().slice(0, 10));
+      fromDate.setDate(today.getDate() - 89);
     } else {
-       // Keep existing dates if no period is specified or period is invalid?
-       // Or clear them like before? Clearing seems reasonable if period controls dates.
-       // setDateFrom('');
-       // setDateTo('');
-       // Decide based on desired UX when URL period changes/is removed
+      // If no valid period, don't set dates from URL, allow manual/default
+      // Or clear them if that's preferred: 
+      // setDateFrom(''); 
+      // setDateTo('');
+      return; // Exit early if no specific period handling is needed
     }
-  }, [searchParams]); // Removed date setters from dependency array as they cause loops
+
+    // Set dates only if a period was processed
+    if (urlPeriod) {
+        fromDate.setHours(0,0,0,0); // Normalize to start of day
+        toDate.setHours(23,59,59,999); // Normalize to end of day
+        setDateFrom(fromDate.toISOString().slice(0, 10));
+        setDateTo(toDate.toISOString().slice(0, 10));
+    }
+
+  }, [searchParams]);
 
   // --- Fetch Data using useQuery ---
    const {

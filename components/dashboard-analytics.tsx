@@ -13,9 +13,15 @@ import { SpendingPieChart } from "./SpendingPieChart";
 import { SpendingOverview } from "./SpendingOverview";
 
 const CATEGORY_COLORS = [
-  "#CE839C", "#E8B4BC", "#6E4555",
-  "#F5E3E0", "#FFB5A7", "#FCD5CE",
-  "#F8EDEB", "#F9DCC4", "#FEC89A",
+  "#B95C7A", // Deeper Rose
+  "#D889A0", // Medium Rose
+  "#F2B8C6", // Lighter Rose (more saturated)
+  "#A34A6F", // Muted Plum
+  "#C77D95", // Dusty Rose
+  "#E0A0B5", // Soft Pink
+  "#8C3D59", // Darker Plum/Rose
+  "#F0D1D9", // Pale Pink
+  "#7B2B46", // Deepest Rose/Maroon
 ];
 
 const TIME_PERIODS = {
@@ -63,11 +69,17 @@ export function DashboardAnalytics({ className }: DashboardAnalyticsProps) {
   const { todaySpending, weekSpending, monthSpending } = useMemo(() => {
     let t = 0, w = 0, m = 0;
     const now = new Date();
+    
+    // Start of today
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfWeek = new Date(startOfToday);
-    startOfWeek.setDate(startOfWeek.getDate() - 6);
-    const startOfMonth = new Date(startOfToday);
-    startOfMonth.setDate(startOfMonth.getDate() - 29);
+    
+    // Start of current week (Monday)
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // Start of current month
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     transactions.forEach((tx) => {
       const d = new Date(tx.date);

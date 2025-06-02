@@ -18,6 +18,7 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Clothing: Shirt,
   Gifts: Gift,
   Bills: CreditCard,
+  "Clothings": Shirt,
   "Subscription": NewspaperIcon,  
   "Beauty related": Heart,
   "Food and Drinks": Utensils
