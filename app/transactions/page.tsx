@@ -16,39 +16,65 @@ import { Search } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useSearchParams } from "next/navigation"; // Make sure this import is present
+import { X } from "lucide-react"
+import { FilterBadge } from "@/components/transaction-page/filter-badge"
+import { TransactionMonthSection } from "@/components/transaction-month-section"
+import { SpendingTrendsChart } from "@/components/spending-trends-chart"
 
-// --- Utility: Group transactions by date and label (Today, Yesterday, Date) ---
-// (Keep your existing groupTransactionsByDate function here)
-function groupTransactionsByDate(transactions: Transaction[], now: Date) {
+// --- Utility: Group transactions by month and date ---
+function groupTransactionsByMonthAndDate(transactions: Transaction[]) {
   const formatLocalYMD = (date: Date) => {
     const y = date.getFullYear();
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
     const d = date.getDate().toString().padStart(2, '0');
     return `${y}-${m}-${d}`;
   };
-  const formatHeader = (date: Date) => date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 
-  const todayYMD = formatLocalYMD(now);
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  const yesterdayYMD = formatLocalYMD(yesterday);
+  const formatMonthYear = (date: Date) => {
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+  };
 
-  const groups: Record<string, Transaction[]> = {};
+  const formatDayHeader = (date: Date, now: Date) => {
+    const dateYMD = formatLocalYMD(date);
+    const todayYMD = formatLocalYMD(now);
+    const yesterdayDate = new Date(now);
+    yesterdayDate.setDate(now.getDate() - 1);
+    const yesterdayYMD = formatLocalYMD(yesterdayDate);
+
+    if (dateYMD === todayYMD) return 'Today';
+    if (dateYMD === yesterdayYMD) return 'Yesterday';
+    return date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  };
+
+  // First, group by month-year
+  const monthGroups: Record<string, Record<string, Transaction[]>> = {};
+  const now = new Date();
+
   transactions.forEach(tx => {
     const txDate = new Date(tx.date);
-    const txYMD = formatLocalYMD(txDate);
-    if (!groups[txYMD]) groups[txYMD] = [];
-    groups[txYMD].push(tx);
+    const monthKey = `${txDate.getFullYear()}-${(txDate.getMonth() + 1).toString().padStart(2, '0')}`;
+    const dayKey = formatLocalYMD(txDate);
+
+    if (!monthGroups[monthKey]) monthGroups[monthKey] = {};
+    if (!monthGroups[monthKey][dayKey]) monthGroups[monthKey][dayKey] = [];
+    monthGroups[monthKey][dayKey].push(tx);
   });
 
-  const sortedKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
-
-  return sortedKeys.map(dateYMD => {
-    let label = formatHeader(new Date(dateYMD + 'T00:00:00')); // Ensure correct date parsing for header
-    if (dateYMD === todayYMD) label = 'Today';
-    else if (dateYMD === yesterdayYMD) label = 'Yesterday';
-    return { label, transactions: groups[dateYMD] };
-  });
+  // Convert to final structure
+  return Object.entries(monthGroups)
+    .sort(([a], [b]) => b.localeCompare(a)) // Sort months newest first
+    .map(([monthKey, dayGroups]) => {
+      const monthDate = new Date(monthKey + '-01'); // First day of month
+      return {
+        monthLabel: formatMonthYear(monthDate),
+        dayGroups: Object.entries(dayGroups)
+          .sort(([a], [b]) => b.localeCompare(a)) // Sort days newest first
+          .map(([dayKey, transactions]) => ({
+            label: formatDayHeader(new Date(dayKey), now),
+            transactions
+          }))
+      };
+    });
 }
 
 
@@ -62,6 +88,21 @@ export default function TransactionsPage() {
 }
 
 
+function applyQuickDateFilter(period: "1D"|"7D"|"30D"|"90D") {
+  const today = new Date();
+  let from = new Date(today);
+  switch(period) {
+    case "1D": /* keep from = today */; break;
+    case "7D": from.setDate(today.getDate() - 6); break;
+    case "30D": from.setDate(today.getDate() - 29); break;
+    case "90D": from.setDate(today.getDate() - 89); break;
+  }
+  return {
+    from: from.toISOString().slice(0,10),
+    to: today.toISOString().slice(0,10)
+  };
+}
+
 function TransactionsContent() {
   // --- State for UI controls ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,6 +110,7 @@ function TransactionsContent() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const [chartViewMode, setChartViewMode] = useState<"day" | "week" | "month">("day");
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
 
   // --- Read filters from URL query params ---
@@ -79,32 +121,46 @@ function TransactionsContent() {
     const urlCategory = searchParams.get('category') || '';
     const urlPeriod = searchParams.get('period') || '';
     setSelectedCategory(urlCategory);
-    if (urlPeriod === '7D') {
-      const today = new Date();
-      const from = new Date();
-      from.setDate(today.getDate() - 6);
-      setDateFrom(from.toISOString().slice(0, 10));
-      setDateTo(today.toISOString().slice(0, 10));
+
+    const today = new Date();
+    let fromDate = new Date(today);
+    let toDate = new Date(today);
+
+    if (urlPeriod === '1D') {
+      // Handled by default fromDate, toDate initialization to today
+    } else if (urlPeriod === 'week') {
+      const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1, ..., Saturday - 6
+      const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday
+      fromDate = new Date(today.setDate(diffToMonday));
+      
+      const diffToSunday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? 0 : 7); // Adjust for Sunday
+      toDate = new Date(new Date().setDate(diffToSunday)); // Use new Date() to avoid mutation from fromDate calculation
+    } else if (urlPeriod === 'month') {
+      fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      toDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
+    } else if (urlPeriod === '7D') {
+      fromDate.setDate(today.getDate() - 6);
     } else if (urlPeriod === '30D') {
-      const today = new Date();
-      const from = new Date();
-      from.setDate(today.getDate() - 29);
-      setDateFrom(from.toISOString().slice(0, 10));
-      setDateTo(today.toISOString().slice(0, 10));
+      fromDate.setDate(today.getDate() - 29);
     } else if (urlPeriod === '90D') {
-      const today = new Date();
-      const from = new Date();
-      from.setDate(today.getDate() - 89);
-      setDateFrom(from.toISOString().slice(0, 10));
-      setDateTo(today.toISOString().slice(0, 10));
+      fromDate.setDate(today.getDate() - 89);
     } else {
-       // Keep existing dates if no period is specified or period is invalid?
-       // Or clear them like before? Clearing seems reasonable if period controls dates.
-       // setDateFrom('');
-       // setDateTo('');
-       // Decide based on desired UX when URL period changes/is removed
+      // If no valid period, don't set dates from URL, allow manual/default
+      // Or clear them if that's preferred: 
+      // setDateFrom(''); 
+      // setDateTo('');
+      return; // Exit early if no specific period handling is needed
     }
-  }, [searchParams]); // Removed date setters from dependency array as they cause loops
+
+    // Set dates only if a period was processed
+    if (urlPeriod) {
+        fromDate.setHours(0,0,0,0); // Normalize to start of day
+        toDate.setHours(23,59,59,999); // Normalize to end of day
+        setDateFrom(fromDate.toISOString().slice(0, 10));
+        setDateTo(toDate.toISOString().slice(0, 10));
+    }
+
+  }, [searchParams]);
 
   // --- Fetch Data using useQuery ---
    const {
@@ -184,11 +240,11 @@ function TransactionsContent() {
   if (isLoading) {
      // Keep your existing Skeleton loading state
      return (
-        <div className="container py-6 space-y-6">
+        <div className="space-y-4 p-4 md:p-6">
            <div className="flex items-center justify-between">
               <div> <Skeleton className="h-8 w-40 mb-2" /> <Skeleton className="h-4 w-64" /> </div>
            </div>
-           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 space-y-4">
+           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 md:p-6 space-y-4">
               <div className="flex justify-between items-center mb-4"> <Skeleton className="h-8 w-48" /> <Skeleton className="h-10 w-40" /> </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 items-end"> <Skeleton className="h-16 w-full" /> <Skeleton className="h-16 w-full" /> <Skeleton className="h-16 w-full" /> <Skeleton className="h-16 w-full" /> </div>
               <Skeleton className="h-10 w-full mb-6" /> {/* Adjusted skeleton for full width search */}
@@ -202,7 +258,7 @@ function TransactionsContent() {
   if (isError) {
       // Keep your existing Error state
        return (
-          <div className="container py-6 space-y-6">
+          <div className="space-y-4 p-2 md:p-4">
              <div className="flex items-center justify-between">
                 <div> <h1 className="text-2xl font-bold tracking-tight text-red-600">Error Loading Data</h1> <p className="text-muted-foreground"> Could not load page data. Please try again later. </p> {error && <p className="text-sm text-red-500 mt-2">Details: {error.message}</p>} </div>
              </div>
@@ -212,7 +268,7 @@ function TransactionsContent() {
 
   // --- Render Main Content ---
   return (
-    <div className="container py-6 space-y-6">
+    <div className="space-y-4 p-2 md:p-4">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -224,8 +280,9 @@ function TransactionsContent() {
       </div>
 
       {/* Main Content Card */}
-      <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-        <div className="p-6">
+      <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-2 md:p-4">
+        {/* Inner Content Container */}
+        <div className="px-1 md:px-2">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
              <div>
                 <h2 className="text-xl font-semibold tracking-tight">Transaction History</h2>
@@ -278,20 +335,171 @@ function TransactionsContent() {
              />
           </div>
 
-          {/* Transaction List with Date Headers */}
-          <div className="space-y-4">
-            {groupTransactionsByDate(filteredTransactions, new Date()).map(({ label, transactions }) => (
-              <div key={label}>
-                {/* Date Header - MODIFIED */}
-                <div className="rounded-md bg-muted px-4 py-2 text-sm font-semibold text-muted-foreground mb-2"> {/* <-- CHANGED STYLING HERE */}
-                  {label}
-                </div>
-                <div className="space-y-4">
-                  {transactions.map(transaction => (
-                    <TransactionItem key={transaction.id} transaction={transaction} />
-                  ))}
-                </div>
+          {/* ─── Active Filters + Clear All ─────────────────────────── */}
+          {(selectedCategory || selectedCard || dateFrom) && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {selectedCategory && (
+                <FilterBadge
+                  label="Category"
+                  value={categories.find(c=>c.id===selectedCategory)?.name || "—"}
+                  onRemove={() => setSelectedCategory("")}
+                />
+              )}
+              {selectedCard && (
+                <FilterBadge
+                  label="Card"
+                  value={cards.find(c=>c.id===selectedCard)?.name || "—"}
+                  onRemove={() => setSelectedCard("")}
+                />
+              )}
+              {(dateFrom || dateTo) && (
+                <FilterBadge
+                  label="Period"
+                  value={
+                    dateFrom === dateTo
+                      ? "Today"
+                      : `${dateFrom} ↔ ${dateTo}`
+                  }
+                  onRemove={() => { setDateFrom(""); setDateTo(""); }}
+                />
+              )}
+
+              <button
+                className="ml-auto flex items-center text-sm font-medium text-primary hover:underline"
+                onClick={() => {
+                  setSelectedCategory("");
+                  setSelectedCard("");
+                  setDateFrom("");
+                  setDateTo("");
+                }}
+              >
+                Clear All <X className="ml-1 h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* ─── Quick Date Filters ──────────────────────────────────── */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const dates = applyQuickDateFilter("1D");
+                setDateFrom(dates.from);
+                setDateTo(dates.to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            >
+              Today
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const dates = applyQuickDateFilter("7D");
+                setDateFrom(dates.from);
+                setDateTo(dates.to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            >
+              This Week
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const dates = applyQuickDateFilter("30D");
+                setDateFrom(dates.from);
+                setDateTo(dates.to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            >
+              This Month
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const dates = applyQuickDateFilter("90D");
+                setDateFrom(dates.from);
+                setDateTo(dates.to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            >
+              Last 3 Months
+            </Button>
+          </div>
+
+          {/* Spending Trends Chart */}
+          <div className="w-full rounded-lg border bg-[#FDF9FA] text-card-foreground shadow-sm p-4 sm:p-6 mt-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 mb-4">
+              <div>
+                <h2 className="text-lg font-semibold">Spending Trends</h2>
+                <p className="text-sm text-muted-foreground">
+                  {chartViewMode === "day" && "Daily"}
+                  {chartViewMode === "week" && "Weekly"}
+                  {chartViewMode === "month" && "Monthly"}
+                  {" spending for the selected period"}
+                </p>
               </div>
+              <div className="flex items-center gap-1 bg-white/50 rounded-lg p-1 self-start sm:self-auto">
+                <Button
+                  variant={chartViewMode === "day" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setChartViewMode("day")}
+                  className={chartViewMode === "day" ? "bg-white" : "hover:bg-white/50"}
+                >
+                  Day
+                </Button>
+                <Button
+                  variant={chartViewMode === "week" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setChartViewMode("week")}
+                  className={chartViewMode === "week" ? "bg-white" : "hover:bg-white/50"}
+                >
+                  Week
+                </Button>
+                <Button
+                  variant={chartViewMode === "month" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setChartViewMode("month")}
+                  className={chartViewMode === "month" ? "bg-white" : "hover:bg-white/50"}
+                >
+                  Month
+                </Button>
+              </div>
+            </div>
+            <SpendingTrendsChart
+              transactions={filteredTransactions}
+              filterPeriod={dateTo && dateFrom
+                ? Math.abs(new Date(dateTo).getTime() - new Date(dateFrom).getTime()) / (1000 * 60 * 60 * 24) > 60
+                  ? "month"
+                  : Math.abs(new Date(dateTo).getTime() - new Date(dateFrom).getTime()) / (1000 * 60 * 60 * 24) > 14
+                    ? "week"
+                    : "day"
+                : "day"}
+              viewMode={chartViewMode}
+              onFilterChange={(from, to) => {
+                setDateFrom(from);
+                setDateTo(to);
+                setSelectedCategory("");
+                setSelectedCard("");
+              }}
+            />
+          </div>
+
+          {/* Transaction List with Month Sections */}
+          <div className="space-y-6 mt-8">
+            {groupTransactionsByMonthAndDate(filteredTransactions).map(({ monthLabel, dayGroups }) => (
+              <TransactionMonthSection
+                key={monthLabel}
+                monthLabel={monthLabel}
+                dayGroups={dayGroups}
+              />
             ))}
             {/* Empty State Message */}
             {filteredTransactions.length === 0 && !isLoading && ( // Added !isLoading check

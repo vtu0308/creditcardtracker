@@ -1,30 +1,34 @@
 "use client"
 
-import { useState } from "react" // Removed useEffect
-import { useQuery } from '@tanstack/react-query' // Import useQuery
-import { storage, Card } from "@/lib/storage" // Import Card type
+import { useState } from "react"
+import { useQuery } from '@tanstack/react-query'
+import { storage, Card } from "@/lib/storage"
 import { AddCardDialog } from "@/components/add-card-dialog"
 import { CardItem } from "@/components/card-item"
 import { Button } from "@/components/ui/button"
 import { AddCardButton } from "@/components/add-card-button"
 import { PlusCircle } from "lucide-react"
-// Optional: Import components for loading/error states
-import { Skeleton } from "@/components/ui/skeleton" // Example skeleton
+import { Skeleton } from "@/components/ui/skeleton"
+import { TimeFilter, TimeFilterPeriod } from "@/components/time-filter"
+import { isTransactionInPeriod } from "@/lib/date-utils"
 
 export function CardList() {
-  // State for controlling the <span className="font-bold text-sm">Add Card</span> dialog visibility
   const [isAddCardOpen, setIsAddCardOpen] = useState(false)
+  const [timePeriod, setTimePeriod] = useState<TimeFilterPeriod>("all")
 
-  // --- Fetch Cards using useQuery ---
+  // Fetch Cards and Transactions
   const {
-    data: cards = [], // Default to empty array while loading/if no data
-    isLoading,        // Loading state flag
-    isError,          // Error state flag
-    // error           // Optional: Access the error object for details
-  } = useQuery<Card[]>({ // Specify the expected return type
-    queryKey: ['cards'], // The unique key for caching card data
-    queryFn: storage.getCards, // The async function to fetch cards
-    // staleTime: 1000 * 60 * 5 // Optional: Keep data fresh for 5 mins
+    data: cards = [],
+    isLoading,
+    isError,
+  } = useQuery<Card[]>({
+    queryKey: ['cards'],
+    queryFn: storage.getCards,
+  });
+
+  const { data: transactions = [] } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: storage.getTransactions,
   });
 
   // REMOVED: The useEffect hook that manually fetched cards and added the event listener
@@ -98,19 +102,31 @@ export function CardList() {
   }
 
   // --- Render Card List (Data Loaded Successfully) ---
+  // Filter transactions by time period for each card
+  const getCardTransactions = (cardId: string) => {
+    return transactions.filter(tx => 
+      tx.cardId === cardId && isTransactionInPeriod(tx.date, timePeriod)
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Your Cards</h2>
-        <AddCardButton onClick={() => setIsAddCardOpen(true)} />
+        <TimeFilter
+          selected={timePeriod}
+          onChange={setTimePeriod}
+        />
       </div>
       <div className="grid gap-4">
-        {/* Map over the 'cards' data fetched by useQuery */}
         {cards.map((card) => (
-          <CardItem key={card.id} card={card} />
+          <CardItem 
+            key={card.id} 
+            card={card}
+            transactions={getCardTransactions(card.id)}
+          />
         ))}
       </div>
-      {/* <span className="font-bold text-sm">Add Card</span> Dialog - controlled by local state */}
       <AddCardDialog open={isAddCardOpen} onOpenChange={setIsAddCardOpen} />
     </div>
   )

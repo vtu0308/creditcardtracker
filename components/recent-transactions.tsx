@@ -20,7 +20,7 @@ export function RecentTransactions() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">Recent Transactions</h2>
+        <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Recent Transactions</h2>
         <AddTransactionButton onClick={() => setIsAddTransactionOpen(true)} />
       </div>
       <div className="grid gap-4">

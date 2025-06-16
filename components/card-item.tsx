@@ -12,41 +12,24 @@ import { Pencil, CreditCardIcon, Calendar } from "lucide-react" // Import new ic
 
 interface CardItemProps {
   card: CardType
+  transactions?: Transaction[]
   onDelete?: () => void
-  className?: string // Add className prop from desired UI
+  className?: string
 }
 
-export function CardItem({ card, onDelete, className }: CardItemProps) {
-  // --- Existing State (Preserved) ---
+export function CardItem({ card, transactions = [], onDelete, className }: CardItemProps) {
   const [isEditOpen, setIsEditOpen] = useState(false)
 
-  // --- Existing Data Fetching (Preserved) ---
-  const {
-    data: transactions = [],
-    isLoading: isLoadingTransactions,
-  } = useQuery<Transaction[]>({
-    queryKey: ['transactions'],
-    queryFn: storage.getTransactions,
-  });
-
-  // --- Existing Balance Calculation (Preserved) ---
+  // Calculate balance from filtered transactions
   const balance = useMemo(() => {
-    const cardTransactions = transactions.filter(t => t.cardId === card.id);
-    const calculatedBalance = cardTransactions.reduce((sum, t) => {
-      // Ensure vndAmount is a valid number before adding
+    return transactions.reduce((sum, t) => {
       return sum + (typeof t.vndAmount === 'number' && !isNaN(t.vndAmount) ? t.vndAmount : 0);
     }, 0);
-    return calculatedBalance;
-  }, [transactions, card.id, card.name]); // Added card.name to dependencies for safety, though id should be sufficient
+  }, [transactions]);
 
-  // --- UI Derivations (Adapted from Desired UI) ---
-  // Determine variant based on calculated balance
-  const variant = balance === 0 && !isLoadingTransactions ? "zero" : "default";
-
-  // Format balance using your existing function and currency (VND)
-  const formattedBalance = isLoadingTransactions
-    ? "..." // Show loading indicator
-    : formatCurrency(balance, "VND");
+  // --- UI Derivations ---
+  const variant = balance === 0 ? "zero" : "default";
+  const formattedBalance = formatCurrency(balance, "VND");
 
   return (
     <>
