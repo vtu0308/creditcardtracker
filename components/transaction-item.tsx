@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQueryClient } from '@tanstack/react-query'
 import { Transaction, SupportedCurrency } from "@/lib/storage"
 import { formatCurrency } from "@/lib/currency"
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EditTransactionDialog } from "./edit-transaction-dialog"
@@ -23,6 +24,7 @@ export function TransactionItem({
 }: TransactionItemProps) {
   const isMobile = useIsMobile()
   const queryClient = useQueryClient()
+
 
   // Handler to invalidate cache after deletion
   const handleDelete = () => {
@@ -159,6 +161,7 @@ export function TransactionItem({
                   ≈ {formatCurrency(vndAmount, 'VND')}
                 </p>
               )}
+
             </div>
 
             <Button

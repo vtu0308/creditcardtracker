@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { CalendarDays, Mail, TrendingUp, ArrowUpRight } from "lucide-react"
 import { formatCurrency } from "@/lib/currency"
 import { useRouter } from "next/navigation"
+import { BudgetProgressBar } from "./budget-progress-bar"
+import { useBudget } from "@/lib/hooks/useBudget"
 
 interface SpendingOverviewProps {
   todaySpending: number
@@ -13,10 +15,16 @@ interface SpendingOverviewProps {
 
 export function SpendingOverview({ todaySpending, weekSpending, monthSpending }: SpendingOverviewProps) {
   const router = useRouter();
+  const { getBudgetStatus } = useBudget();
+  const status = getBudgetStatus();
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <Card 
+    <div className="space-y-4 relative">
+      <Card className="bg-[#F7EDEF] p-4 shadow-sm">
+        <BudgetProgressBar />
+      </Card>
+      <div className="grid gap-4 md:grid-cols-3 pt-4">
+        <Card 
         className="bg-primary/5 cursor-pointer group relative hover:shadow-md hover:bg-primary/10 transition-all duration-200" 
         onClick={() => router.push(`/transactions?period=1D`)}
       >
@@ -81,6 +89,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

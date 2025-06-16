@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, CreditCard, LayoutList, Settings, Menu, Sun } from "lucide-react"
+import { Home, CreditCard, LayoutList, Settings, Menu, Sun, Target } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -22,6 +22,7 @@ export function MainNav() {
     { title: "Home", href: "/", icon: Home },
     { title: "Cards", href: "/cards", icon: CreditCard },
     { title: "Transactions", href: "/transactions", icon: LayoutList },
+    { title: "Budget", href: "/budget", icon: Target },
     { title: "Settings", href: "/settings", icon: Settings }
   ];
 
