@@ -10,7 +10,11 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 // Font setup remains the same - applies --font-sans variable
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-sans", // Make sure tailwind.config.js uses this variable for font-sans
+  variable: "--font-sans",
+  display: "swap",
+  preload: true,
+  weight: ["400", "500", "600", "700"],
+  fallback: ["system-ui", "arial"]
 })
 
 export const metadata: Metadata = {
@@ -34,7 +38,7 @@ export default function RootLayout({
             Ensure your tailwind.config.js is updated as discussed previously
             to correctly map the `font-sans` utility to `var(--font-sans)`.
           */}
-          <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
+          <body className={`${plusJakartaSans.variable} font-sans antialiased !font-sans`}>
             {/* ClientLayout kept assuming it's needed */}
             <ClientLayout>
               <MainNav /> {/* Render the refactored MainNav */}

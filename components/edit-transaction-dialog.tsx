@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react" // Keep useEffect for loading transaction data
-import { useQuery, useQueryClient } from '@tanstack/react-query' // Added useQuery
-import { storage, SupportedCurrency, isSupportedCurrency, Transaction, Card, Category } from "@/lib/storage" // Ensure all types are imported
+import { useState, useEffect } from "react"
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { storage, SupportedCurrency, isSupportedCurrency, Transaction, Card, Category } from "@/lib/storage"
 import { convertToVND } from "@/lib/currency"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,8 +32,8 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
   const [categoryId, setCategoryId] = useState("")
   const [date, setDate] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false); // Separate state for delete operation
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const [submitError, setSubmitError] = useState<string | null>(null); // State for user-facing errors
 
   // --- Fetch Cards using useQuery ---
@@ -67,8 +67,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
       setCategoryId(transaction.categoryId || "");
       setDate(transaction.date ? transaction.date.split('T')[0] : new Date().toISOString().split("T")[0]);
       setSubmitError(null); // Clear any previous errors when opening/changing transaction
-      setIsSubmitting(false); // Ensure submitting state is reset
-      setIsDeleting(false); // Ensure deleting state is reset
+      setIsSubmitting(false);
     } else if (!open) {
       // Optional: Reset form when dialog closes if desired
       // setDescription(""); setAmount(""); ... etc.
@@ -139,35 +138,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
     }
   };
 
-  const handleDelete = async () => {
-    if (!transaction || isDeleting) return; // Prevent multiple delete clicks
 
-    setIsDeleting(true);
-    setSubmitError(null); // Clear other errors
-
-    try {
-      console.log('[EditTransactionDialog] Calling storage.deleteTransaction...');
-      await storage.deleteTransaction(transaction.id);
-      console.log('[EditTransactionDialog] storage.deleteTransaction succeeded.');
-
-      // --- Invalidate transactions query (Correct) ---
-      console.log('[EditTransactionDialog] Invalidating transactions query after delete...');
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      console.log('[EditTransactionDialog] Query invalidated after delete.');
-
-      setShowDeleteAlert(false); // Close the alert
-      onOpenChange?.(false); // Close the main dialog
-      onDelete?.(); // Call optional callback
-
-    } catch (error) {
-      console.error('Error deleting transaction:', error);
-      // Show error within the alert dialog might be tricky, maybe show in main dialog after alert closes?
-      setSubmitError(error instanceof Error ? error.message : 'An unexpected error occurred while deleting.');
-      setShowDeleteAlert(false); // Close the alert even on error to show the message
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   // Don't render anything if there's no transaction data (e.g., initially)
   if (!transaction) return null;
@@ -191,7 +162,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
-            <fieldset disabled={isSubmitting || isDeleting || dataLoading}> {/* Disable form while submitting/deleting/loading selects */}
+            <fieldset disabled={isSubmitting || dataLoading}> {/* Disable form while submitting/loading selects */}
               <div className="grid gap-4 py-4">
                 {/* Description */}
                 <div className="grid gap-2">
@@ -303,13 +274,13 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
               <Button
                 type="button"
                 variant="destructive"
-                onClick={() => setShowDeleteAlert(true)}
-                disabled={isSubmitting || isDeleting || dataLoading} // Disable if submitting save or loading data
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isSubmitting || dataLoading}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </Button>
-              <Button type="submit" disabled={isSubmitting || isDeleting || dataLoading}>
+              <Button type="submit" disabled={isSubmitting || dataLoading}>
                 {isSubmitting ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
@@ -318,26 +289,25 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onDelet
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this transaction. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting} // Disable while delete is in progress
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmationDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Transaction"
+        description="This will permanently delete this transaction. This action cannot be undone."
+        onConfirm={async () => {
+          if (!transaction) return;
+          await storage.deleteTransaction(transaction.id);
+          await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          toast({
+            title: "Transaction Deleted",
+            description: `Successfully deleted transaction.`,
+          });
+          onOpenChange?.(false);
+          onDelete?.();
+        }}
+        confirmText="Delete"
+        confirmVariant="destructive"
+      />
     </>
   )
 }

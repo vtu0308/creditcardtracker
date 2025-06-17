@@ -20,9 +20,11 @@ const config = {
   	},
   	extend: {
 		fontFamily: {
-			// Use the specific variable name from your layout.tsx
-			// Also include the default stack as a fallback
-			sans: ["var(--font-sans)", ...fontFamily.sans],
+			sans: [
+				"var(--font-sans)",
+				"Plus Jakarta Sans",
+				...fontFamily.sans
+			],
 		},
   		colors: {
   			border: "hsl(var(--border))",

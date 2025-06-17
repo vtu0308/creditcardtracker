@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useQueryClient } from '@tanstack/react-query' // Import hook
+import { useQueryClient } from '@tanstack/react-query'
 import { storage, Card as CardType } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,8 +25,8 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
   const [statementDay, setStatementDay] = useState("")
   const [dueDay, setDueDay] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false); // State for save operation
-  const [isDeleting, setIsDeleting] = useState(false); // State for delete operation
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const [submitError, setSubmitError] = useState<string | null>(null); // State for errors
 
   // Load card data when dialog opens or card changes
@@ -37,7 +37,6 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
       setDueDay(card.dueDay?.toString() || "")
       setSubmitError(null); // Clear errors on open/change
       setIsSubmitting(false);
-      setIsDeleting(false);
     }
   }, [card, open]);
 
@@ -50,7 +49,7 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
         setSubmitError("Please fill in all fields correctly (Days must be between 1 and 31).");
         return;
     }
-    if (isSubmitting || isDeleting) return;
+    if (isSubmitting) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -69,7 +68,6 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
       queryClient.invalidateQueries({ queryKey: ['cards'] });
       console.log('[EditCardDialog] Query invalidated.');
 
-      // REMOVED: window.dispatchEvent(new Event('storage-changed'))
       toast({
         title: "Card Updated",
         description: `Card \"${name}\" updated successfully.`,
@@ -92,49 +90,6 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
     }
   }
 
-  const handleDelete = async () => { // Make async
-    if (!card || isDeleting || isSubmitting) return;
-
-    setIsDeleting(true);
-    setSubmitError(null);
-
-    try {
-        console.log('[EditCardDialog] Calling storage.deleteCard...');
-        await storage.deleteCard(card.id); // Await the async operation
-        console.log('[EditCardDialog] storage.deleteCard succeeded.');
-
-        // --- Invalidate the 'cards' query ---
-        console.log('[EditCardDialog] Invalidating cards query after delete...');
-        queryClient.invalidateQueries({ queryKey: ['cards'] });
-        // --- ALSO Invalidate 'transactions' as they might be affected ---
-        // (Consider if deleting a card also deletes its transactions in your backend)
-        // If so, invalidating transactions is crucial. If not, it might be optional.
-        console.log('[EditCardDialog] Invalidating transactions query after card delete...');
-        queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        console.log('[EditCardDialog] Queries invalidated after delete.');
-
-        toast({
-          title: "Card Deleted",
-          description: `Card deleted successfully.`,
-        });
-        setShowDeleteAlert(false); // Close confirmation
-        onDelete?.(); // Optional callback
-        onOpenChange?.(false); // Close main dialog
-
-    } catch(error) {
-        console.error('Error deleting card:', error);
-        setSubmitError(error instanceof Error ? error.message : 'Failed to delete card.');
-        toast({
-          variant: "destructive",
-          title: "Error Deleting Card",
-          description: error instanceof Error ? error.message : 'Failed to delete card.',
-        });
-        setShowDeleteAlert(false); // Close alert even on error to show message
-    } finally {
-        setIsDeleting(false);
-    }
-  }
-
   if (!card) return null; // Don't render if no card is provided
 
   return (
@@ -154,7 +109,7 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
           </DialogHeader>
           <form onSubmit={handleSubmit}>
              {/* Disable form fields during async operations */}
-            <fieldset disabled={isSubmitting || isDeleting}>
+            <fieldset disabled={isSubmitting}> {/* Disable form while submitting/deleting */}
                 <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                     <Label htmlFor="edit-card-name">Card Name</Label>
@@ -202,13 +157,13 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
               <Button
                 type="button"
                 variant="destructive"
-                onClick={() => setShowDeleteAlert(true)}
-                disabled={isSubmitting || isDeleting} // Disable if saving/deleting
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isSubmitting} // Disable if saving/deleting
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </Button>
-              <Button type="submit" disabled={isSubmitting || isDeleting}>
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
@@ -217,27 +172,27 @@ export function EditCardDialog({ card, open, onOpenChange, onDelete }: EditCardD
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {/* Updated description to be more general */}
-              This will permanently delete this card. This action cannot be undone. Please ensure associated transactions are handled appropriately if needed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting} // Disable while deleting
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmationDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Card"
+        description="This will permanently delete this card. This action cannot be undone. Please ensure associated transactions are handled appropriately if needed."
+        onConfirm={async () => {
+          if (!card) return;
+          await storage.deleteCard(card.id);
+          await queryClient.invalidateQueries({ queryKey: ['cards'] });
+          // Also invalidate transactions as they might be affected
+          await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          toast({
+            title: "Card Deleted",
+            description: `Card "${name}" has been deleted.`,
+          });
+          onOpenChange?.(false);
+          onDelete?.();
+        }}
+        confirmText="Delete"
+        confirmVariant="destructive"
+      />
     </>
   )
 }
