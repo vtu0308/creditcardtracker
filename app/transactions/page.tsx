@@ -1,25 +1,22 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Input } from "@/components/ui/input"; // Added Input import
-import { Button } from "@/components/ui/button"; // Added Button import
+import { storage, DatePeriod, Transaction, Card, Category } from '@/lib/storage';
+import { Button } from "@/components/ui/button";
 import { AddTransactionButton } from "@/components/add-transaction-button";
-import { PlusCircle } from "lucide-react"; // Added Icon import
-import { AddTransactionDialog } from "@/components/add-transaction-dialog"; // Added Dialog import
-import { storage, Transaction, Card, Category } from "@/lib/storage";
-import { TransactionItem } from "@/components/transaction-item"; // Added TransactionItem import
+import { AddTransactionDialog } from "@/components/add-transaction-dialog";
+import { Input } from "@/components/ui/input";
+import { TransactionItem } from "@/components/transaction-item";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search } from "lucide-react";
-
+import { PlusCircle, Search, X } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
-import { useSearchParams } from "next/navigation"; // Make sure this import is present
-import { X } from "lucide-react"
-import { FilterBadge } from "@/components/transaction-page/filter-badge"
-import { TransactionMonthSection } from "@/components/transaction-month-section"
-import { SpendingTrendsChart } from "@/components/spending-trends-chart"
+import { FilterBadge } from "@/components/transaction-page/filter-badge";
+import { TransactionMonthSection } from "@/components/transaction-month-section";
+import { SpendingTrendsChart } from "@/components/spending-trends-chart";
 
 // --- Utility: Group transactions by month and date ---
 function groupTransactionsByMonthAndDate(transactions: Transaction[]) {
@@ -103,6 +100,24 @@ function applyQuickDateFilter(period: "1D"|"7D"|"30D"|"90D") {
   };
 }
 
+// Helper function to manage URL parameters
+function updateUrlParams(updates: { [key: string]: string | null }, currentParams: URLSearchParams, router: any) {
+  const newParams = new URLSearchParams(currentParams.toString());
+  
+  // Apply updates
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === null) {
+      newParams.delete(key);
+    } else {
+      newParams.set(key, value);
+    }
+  });
+
+  // Push new URL
+  const query = newParams.toString();
+  router.push(`/transactions${query ? `?${query}` : ''}`, { scroll: false });
+}
+
 function TransactionsContent() {
   // --- State for UI controls ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,116 +130,76 @@ function TransactionsContent() {
 
   // --- Read filters from URL query params ---
   const searchParams = useSearchParams();
+  const router = useRouter();
 
-  // Sync category and period from URL params (Keep your existing useEffect)
+  // Sync category and period from URL params
   useEffect(() => {
     const urlCategory = searchParams.get('category') || '';
-    const urlPeriod = searchParams.get('period') || '';
+    const urlPeriodParam = searchParams.get('period');
     setSelectedCategory(urlCategory);
 
-    const today = new Date();
-    let fromDate = new Date(today);
-    let toDate = new Date(today);
+    const isValidDatePeriod = (period: string | null): period is DatePeriod => {
+      if (!period) return false;
+      return ['today', 'current-week', 'current-month', 'last-month'].includes(period);
+    };
 
-    if (urlPeriod === '1D') {
-      // Handled by default fromDate, toDate initialization to today
-    } else if (urlPeriod === 'week') {
-      const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1, ..., Saturday - 6
-      const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday
-      fromDate = new Date(today.setDate(diffToMonday));
-      
-      const diffToSunday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? 0 : 7); // Adjust for Sunday
-      toDate = new Date(new Date().setDate(diffToSunday)); // Use new Date() to avoid mutation from fromDate calculation
-    } else if (urlPeriod === 'month') {
-      fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      toDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
-    } else if (urlPeriod === '7D') {
-      fromDate.setDate(today.getDate() - 6);
-    } else if (urlPeriod === '30D') {
-      fromDate.setDate(today.getDate() - 29);
-    } else if (urlPeriod === '90D') {
-      fromDate.setDate(today.getDate() - 89);
+    if (isValidDatePeriod(urlPeriodParam)) {
+      const { from, to } = storage.getDateRangeFromPeriod(urlPeriodParam);
+      setDateFrom(from);
+      setDateTo(to);
     } else {
-      // If no valid period, don't set dates from URL, allow manual/default
-      // Or clear them if that's preferred: 
-      // setDateFrom(''); 
-      // setDateTo('');
-      return; // Exit early if no specific period handling is needed
+      // If no period or an invalid one, clear the dates
+      // This allows manual date input to still work if period is removed from URL
+      // Or if a quick filter is cleared, the date inputs should also clear.
+      const manualDateFrom = searchParams.get('from');
+      const manualDateTo = searchParams.get('to');
+      if (!manualDateFrom && !manualDateTo && !urlPeriodParam) {
+        setDateFrom('');
+        setDateTo('');
+      }
     }
-
-    // Set dates only if a period was processed
-    if (urlPeriod) {
-        fromDate.setHours(0,0,0,0); // Normalize to start of day
-        toDate.setHours(23,59,59,999); // Normalize to end of day
-        setDateFrom(fromDate.toISOString().slice(0, 10));
-        setDateTo(toDate.toISOString().slice(0, 10));
-    }
-
   }, [searchParams]);
 
   // --- Fetch Data using useQuery ---
-   const {
-      data: transactions = [],
-      isLoading: isLoadingTransactions,
-      isError: isErrorTransactions,
-      error: transactionsError,
-   } = useQuery<Transaction[]>({
-      queryKey: ['transactions'],
-      queryFn: storage.getTransactions,
-   });
+   const { data: transactions = [], isLoading: isLoadingTransactions, isError: isErrorTransactions, error: transactionsError } = useQuery<Transaction[]>({
+    queryKey: ['transactions', searchParams.get('period')],
+    queryFn: () => storage.getTransactions(searchParams.get('period') as DatePeriod || undefined),
+  });
 
-   const {
-      data: cards = [],
-      isLoading: isLoadingCards,
-      isError: isErrorCards,
-      error: cardsError,
-   } = useQuery<Card[]>({
-      queryKey: ['cards'],
-      queryFn: storage.getCards,
-   });
+  const { data: cards = [], isLoading: isLoadingCards, isError: isErrorCards, error: cardsError } = useQuery<Card[]>({
+    queryKey: ['cards'],
+    queryFn: storage.getCards,
+  });
 
-   const {
-      data: categories = [],
-      isLoading: isLoadingCategories,
-      isError: isErrorCategories,
-      error: categoriesError,
-   } = useQuery<Category[]>({
-      queryKey: ['categories'],
-      queryFn: storage.getCategories,
-   });
+  const { data: categories = [], isLoading: isLoadingCategories, isError: isErrorCategories, error: categoriesError } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: storage.getCategories,
+  });
 
 
   // --- Calculate Filtered Transactions using useMemo ---
   const filteredTransactions = useMemo(() => {
-    // Keep your existing useMemo logic
-    return transactions.filter(transaction => {
+    return transactions?.filter((transaction: Transaction) => {
       if (selectedCard && transaction.cardId !== selectedCard) return false;
       if (selectedCategory && transaction.categoryId !== selectedCategory) return false;
       if (dateFrom) {
-          try {
-              // Compare only dates, ignore time by creating date objects at midnight UTC
-              const txDateOnly = new Date(Date.UTC(new Date(transaction.date).getUTCFullYear(), new Date(transaction.date).getUTCMonth(), new Date(transaction.date).getUTCDate()));
-              const fromDateOnly = new Date(Date.UTC(new Date(dateFrom).getUTCFullYear(), new Date(dateFrom).getUTCMonth(), new Date(dateFrom).getUTCDate()));
-              if (txDateOnly < fromDateOnly) return false;
-          } catch { return false; }
+        const transactionDate = new Date(transaction.date);
+        const fromDate = new Date(dateFrom);
+        fromDate.setHours(0,0,0,0); // Normalize to start of day
+        if (transactionDate < fromDate) return false;
       }
       if (dateTo) {
-          try {
-              // Compare only dates, ignore time
-               const txDateOnly = new Date(Date.UTC(new Date(transaction.date).getUTCFullYear(), new Date(transaction.date).getUTCMonth(), new Date(transaction.date).getUTCDate()));
-               const toDateOnly = new Date(Date.UTC(new Date(dateTo).getUTCFullYear(), new Date(dateTo).getUTCMonth(), new Date(dateTo).getUTCDate()));
-               if (txDateOnly > toDateOnly) return false;
-          } catch { return false; }
+        const transactionDate = new Date(transaction.date);
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999); // Normalize to end of day
+        if (transactionDate > toDate) return false;
       }
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
-        const descMatch = transaction.description.toLowerCase().includes(searchLower);
-        // Ensure cardName and categoryName exist before calling toLowerCase
-        const cardMatch = transaction.cardName && transaction.cardName.toLowerCase().includes(searchLower);
-        const catMatch = transaction.categoryName && transaction.categoryName.toLowerCase().includes(searchLower);
-        if (!descMatch && !cardMatch && !catMatch) {
-          return false;
-        }
+        return (
+          transaction.description.toLowerCase().includes(searchLower) ||
+          transaction.amount.toString().includes(searchLower)
+        );
       }
       return true;
     });
@@ -258,7 +233,7 @@ function TransactionsContent() {
   if (isError) {
       // Keep your existing Error state
        return (
-          <div className="space-y-4 p-2 md:p-4">
+          <div className="space-y-2 p-0 sm:p-4">
              <div className="flex items-center justify-between">
                 <div> <h1 className="text-2xl font-bold tracking-tight text-red-600">Error Loading Data</h1> <p className="text-muted-foreground"> Could not load page data. Please try again later. </p> {error && <p className="text-sm text-red-500 mt-2">Details: {error.message}</p>} </div>
              </div>
@@ -268,7 +243,7 @@ function TransactionsContent() {
 
   // --- Render Main Content ---
   return (
-    <div className="space-y-4 p-2 md:p-4">
+    <div className="space-y-2 p-0 sm:p-4">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -280,9 +255,9 @@ function TransactionsContent() {
       </div>
 
       {/* Main Content Card */}
-      <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-2 md:p-4">
+      <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-0 sm:p-4">
         {/* Inner Content Container */}
-        <div className="px-1 md:px-2">
+        <div className="p-2 sm:px-2">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
              <div>
                 <h2 className="text-xl font-semibold tracking-tight">Transaction History</h2>
@@ -342,14 +317,20 @@ function TransactionsContent() {
                 <FilterBadge
                   label="Category"
                   value={categories.find(c=>c.id===selectedCategory)?.name || "—"}
-                  onRemove={() => setSelectedCategory("")}
+                  onRemove={() => {
+                    setSelectedCategory("");
+                    updateUrlParams({ category: null }, searchParams, router);
+                  }}
                 />
               )}
               {selectedCard && (
                 <FilterBadge
                   label="Card"
                   value={cards.find(c=>c.id===selectedCard)?.name || "—"}
-                  onRemove={() => setSelectedCard("")}
+                  onRemove={() => {
+                    setSelectedCard("");
+                    updateUrlParams({ card: null }, searchParams, router);
+                  }}
                 />
               )}
               {(dateFrom || dateTo) && (
@@ -360,17 +341,30 @@ function TransactionsContent() {
                       ? "Today"
                       : `${dateFrom} ↔ ${dateTo}`
                   }
-                  onRemove={() => { setDateFrom(""); setDateTo(""); }}
+                  onRemove={() => {
+                    setDateFrom("");
+                    setDateTo("");
+                    updateUrlParams({
+                      period: null,
+                      from: null,
+                      to: null
+                    }, searchParams, router);
+                  }}
                 />
               )}
 
               <button
                 className="ml-auto flex items-center text-sm font-medium text-primary hover:underline"
                 onClick={() => {
+                  // Clear local state
                   setSelectedCategory("");
                   setSelectedCard("");
                   setDateFrom("");
                   setDateTo("");
+                  setSearchQuery("");
+                  
+                  // Remove all URL parameters by pushing a clean URL
+                  router.push('/transactions', { scroll: false });
                 }}
               >
                 Clear All <X className="ml-1 h-4 w-4" />
@@ -383,52 +377,55 @@ function TransactionsContent() {
             <Button 
               size="sm" 
               variant="outline" 
-              onClick={() => {
-                const dates = applyQuickDateFilter("1D");
-                setDateFrom(dates.from);
-                setDateTo(dates.to);
-                setSelectedCategory("");
-                setSelectedCard("");
-              }}
+              onClick={() => updateUrlParams({ 
+                period: 'today',
+                from: null,
+                to: null
+              }, searchParams, router)}
             >
               Today
             </Button>
             <Button 
               size="sm" 
               variant="outline" 
-              onClick={() => {
-                const dates = applyQuickDateFilter("7D");
-                setDateFrom(dates.from);
-                setDateTo(dates.to);
-                setSelectedCategory("");
-                setSelectedCard("");
-              }}
+              onClick={() => updateUrlParams({
+                period: 'current-week',
+                from: null,
+                to: null
+              }, searchParams, router)}
             >
               This Week
             </Button>
             <Button 
               size="sm" 
               variant="outline" 
-              onClick={() => {
-                const dates = applyQuickDateFilter("30D");
-                setDateFrom(dates.from);
-                setDateTo(dates.to);
-                setSelectedCategory("");
-                setSelectedCard("");
-              }}
+              onClick={() => updateUrlParams({
+                period: 'current-month',
+                from: null,
+                to: null
+              }, searchParams, router)}
             >
               This Month
             </Button>
             <Button 
               size="sm" 
               variant="outline" 
-              onClick={() => {
-                const dates = applyQuickDateFilter("90D");
-                setDateFrom(dates.from);
-                setDateTo(dates.to);
-                setSelectedCategory("");
-                setSelectedCard("");
-              }}
+              onClick={() => updateUrlParams({
+                period: 'last-month',
+                from: null,
+                to: null
+              }, searchParams, router)}
+            >
+              Last Month
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => updateUrlParams({
+                period: 'last-3-months',
+                from: null,
+                to: null
+              }, searchParams, router)}
             >
               Last 3 Months
             </Button>

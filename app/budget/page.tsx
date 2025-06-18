@@ -250,35 +250,37 @@ export default function BudgetPage() {
 
 
   return (
-    <div className="px-4 py-6 space-y-6 md:container">
+    <div className="p-0 sm:p-4 space-y-4 sm:space-y-6 md:container">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Budget Management</h1>
         <p className="text-sm text-muted-foreground">Set and track your monthly spending budget</p>
       </div>
 
-      <Card className="bg-[#F7EDEF] rounded-xl shadow-sm mb-8 flex flex-row items-center px-6 py-4 justify-between">
-        <div className="flex items-start space-x-4">
-          <div className="rounded-full bg-[#F3E2E7] p-3 mt-0.5">
-            <Target className="w-6 h-6 text-[#C58B9F]" />
+      <Card className="bg-[#F7EDEF] rounded-xl shadow-sm mb-8">
+        <div className="px-4 sm:px-6 py-4 flex flex-row items-start justify-between gap-4">
+          <div className="flex items-start gap-4 min-w-0">
+            <div className="rounded-full bg-[#F3E2E7] p-3 shrink-0">
+              <Target className="w-6 h-6 text-[#C58B9F]" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-lg font-semibold leading-tight">Budget Tracking</h2>
+              <p className="text-sm text-[#7B7680] mt-0.5 truncate">
+                Budget tracking is {budget.enabled ? 'active' : 'disabled'}
+                {budget.enabled && budget.lastUpdated && (
+                  <span className="text-xs text-muted-foreground/70 ml-1">
+                    (Last updated: {new Date(budget.lastUpdated).toLocaleDateString()})
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <h2 className="text-lg font-semibold leading-tight">Budget Tracking</h2>
-            <p className="text-sm text-[#7B7680] mt-0.5">
-              Budget tracking is {budget.enabled ? 'active' : 'disabled'}
-              {budget.enabled && budget.lastUpdated && (
-                <span className="ml-2 text-xs text-muted-foreground/70">
-                  (Last updated: {new Date(budget.lastUpdated).toLocaleDateString()})
-                </span>
-              )}
-            </p>
-          </div>
+          <Switch
+            checked={budget.enabled}
+            onCheckedChange={handleToggleBudget}
+            disabled={saving}
+            className="data-[state=checked]:bg-[#C58B9F] shrink-0"
+          />
         </div>
-        <Switch
-          checked={budget.enabled}
-          onCheckedChange={handleToggleBudget}
-          disabled={saving}
-          className="data-[state=checked]:bg-[#C58B9F]"
-        />
       </Card>
 
       {budget.enabled ? (
