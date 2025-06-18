@@ -20,13 +20,11 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
 
   return (
     <div className="space-y-4 relative">
-      <Card className="bg-[#F7EDEF] p-4 shadow-sm">
-        <BudgetProgressBar />
-      </Card>
-      <div className="grid gap-4 md:grid-cols-3 pt-4">
+      <div className="grid gap-4 md:grid-cols-3">
+
         <Card 
         className="bg-primary/5 cursor-pointer group relative hover:shadow-md hover:bg-primary/10 transition-all duration-200" 
-        onClick={() => router.push(`/transactions?period=1D`)}
+        onClick={() => router.push(`/transactions?period=today`)}
       >
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
           <ArrowUpRight className="h-4 w-4 text-primary" />
@@ -34,7 +32,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Today</p>
+              <p className="text-sm font-bold text-muted-foreground">Today</p>
               <p className="text-2xl font-bold mt-1 text-black">
                 {formatCurrency(todaySpending, "VND")}
               </p>
@@ -48,7 +46,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
 
       <Card 
         className="bg-primary/5 cursor-pointer group relative hover:shadow-md hover:bg-primary/10 transition-all duration-200"
-        onClick={() => router.push(`/transactions?period=week`)}
+        onClick={() => router.push(`/transactions?period=current-week`)}
       >
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
           <ArrowUpRight className="h-4 w-4 text-primary" />
@@ -56,7 +54,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">This Week</p>
+              <p className="text-sm font-bold text-muted-foreground">This Week</p>
               <p className="text-2xl font-bold mt-1 text-black">
                 {formatCurrency(weekSpending, "VND")}
               </p>
@@ -70,7 +68,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
 
       <Card 
         className="bg-primary/5 cursor-pointer group relative hover:shadow-md hover:bg-primary/10 transition-all duration-200"
-        onClick={() => router.push(`/transactions?period=month`)}
+        onClick={() => router.push(`/transactions?period=current-month`)}
       >
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
           <ArrowUpRight className="h-4 w-4 text-primary" />
@@ -78,7 +76,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">This Month</p>
+              <p className="text-sm font-bold text-muted-foreground">This Month</p>
               <p className="text-2xl font-bold mt-1 text-black">
                 {formatCurrency(monthSpending, "VND")}
               </p>
@@ -90,6 +88,9 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
         </CardContent>
       </Card>
       </div>
+      <Card className="bg-[#F7EDEF] p-4 shadow-sm">
+        <BudgetProgressBar />
+      </Card>
     </div>
   )
 }
