@@ -123,6 +123,38 @@ export const storage = {
   },
 
   // Helpers
+  getDateRangeFromPeriod(period: string): { from: Date, to: Date } {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    switch (period) {
+      case 'today':
+        return { from: startOfDay, to: endOfDay };
+      case 'current-week': {
+        const firstDay = new Date(now);
+        firstDay.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+        firstDay.setHours(0, 0, 0, 0);
+        const lastDay = new Date(now);
+        lastDay.setDate(now.getDate() + (6 - now.getDay())); // End of week (Saturday)
+        lastDay.setHours(23, 59, 59, 999);
+        return { from: firstDay, to: lastDay };
+      }
+      case 'current-month': {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return { from: firstDay, to: lastDay };
+      }
+      case 'last-month': {
+        const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        return { from: firstDay, to: lastDay };
+      }
+      default:
+        return { from: startOfDay, to: endOfDay };
+    }
+  },
+
   async getCardBalance(cardId: string): Promise<number> {
     const { data, error } = await supabase.from('transactions').select('vndAmount').eq('cardId', cardId);
     if (error) throw error;

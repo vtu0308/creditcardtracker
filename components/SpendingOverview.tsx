@@ -23,7 +23,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
       <Card className="bg-[#F7EDEF] p-4 shadow-sm">
         <BudgetProgressBar />
       </Card>
-      <div className="grid gap-4 md:grid-cols-3 pt-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card 
         className="bg-primary/5 cursor-pointer group relative hover:shadow-md hover:bg-primary/10 transition-all duration-200" 
         onClick={() => router.push(`/transactions?period=1D`)}
