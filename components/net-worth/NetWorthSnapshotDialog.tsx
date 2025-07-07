@@ -247,7 +247,7 @@ export default function NetWorthSnapshotDialog({ open, onOpenChange, snapshot }:
                     onClick={() => snapshot && deleteMutation.mutate(snapshot.id)}
                     className="rounded-full bg-[#EF4444] hover:bg-[#d83a3a] mr-auto"
                   >
-                    <Trash2 className="h-4 w-4 text-white" />
+                    <Trash2 className="h-3 w-3 text-white" />
                   </Button>
                 </>
               ) : (

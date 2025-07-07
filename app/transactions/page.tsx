@@ -145,15 +145,15 @@ function TransactionsContent() {
 
     if (isValidDatePeriod(urlPeriodParam)) {
       const { from, to } = storage.getDateRangeFromPeriod(urlPeriodParam);
-      setDateFrom(from.toISOString().split('T')[0]);
-      setDateTo(to.toISOString().split('T')[0]);
+      setDateFrom(from);
+      setDateTo(to);
     }
   }, [searchParams]);
 
   // --- Fetch Data using useQuery ---
    const { data: transactions = [], isLoading: isLoadingTransactions, isError: isErrorTransactions, error: transactionsError } = useQuery<Transaction[]>({
     queryKey: ['transactions'],
-    queryFn: storage.getTransactions,
+    queryFn: async () => await storage.getTransactions(),
   });
 
   const { data: cards = [], isLoading: isLoadingCards, isError: isErrorCards, error: cardsError } = useQuery<Card[]>({
@@ -502,8 +502,8 @@ function TransactionsContent() {
               transactions={filteredTransactions}
               dateRange={{
                 // If no dates are set, find the date range from transactions
-                from: dateFrom ? new Date(dateFrom) : new Date(Math.min(...filteredTransactions.map(tx => new Date(tx.date).getTime()))),
-                to: dateTo ? new Date(dateTo) : new Date(Math.max(...filteredTransactions.map(tx => new Date(tx.date).getTime())))
+                from: dateFrom ? new Date(dateFrom) : new Date(Math.min(...filteredTransactions.map((tx: Transaction) => new Date(tx.date).getTime()))),
+                to: dateTo ? new Date(dateTo) : new Date(Math.max(...filteredTransactions.map((tx: Transaction) => new Date(tx.date).getTime())))
               }}
               onCategoryClick={(categoryName) => {
                 // Find the category ID from the name
