@@ -18,8 +18,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: "CardTracker",
-  description: "Track your credit card expenses and manage statement cycles",
+  title: "Wealth Manager",
+  description: "Track and manage your net worth, assets, and financial goals",
 }
 
 export default function RootLayout({

@@ -171,7 +171,8 @@ export const storage = {
   },
 
   // Helpers
-  async getCardBalance(cardId: string): Promise<number> { // Note: This was the previous end of the storage object before adding getDateRangeFromPeriod
+
+  async getCardBalance(cardId: string): Promise<number> {
     const { data, error } = await supabase.from('transactions').select('vndAmount').eq('cardId', cardId);
     if (error) throw error;
     return (data || []).reduce((sum: number, t: { vndAmount: number }) => sum + (t.vndAmount || 0), 0);

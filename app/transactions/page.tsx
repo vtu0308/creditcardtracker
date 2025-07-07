@@ -17,6 +17,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { FilterBadge } from "@/components/transaction-page/filter-badge";
 import { TransactionMonthSection } from "@/components/transaction-month-section";
 import { SpendingTrendsChart } from "@/components/spending-trends-chart";
+import { TransactionSummary } from "@/components/transaction-page/transaction-summary";
 
 // --- Utility: Group transactions by month and date ---
 function groupTransactionsByMonthAndDate(transactions: Transaction[]) {
@@ -135,11 +136,10 @@ function TransactionsContent() {
   // Sync category and period from URL params
   useEffect(() => {
     const urlCategory = searchParams.get('category') || '';
-    const urlPeriodParam = searchParams.get('period');
+    const urlPeriodParam = searchParams.get('period') || 'last-month';
     setSelectedCategory(urlCategory);
 
-    const isValidDatePeriod = (period: string | null): period is DatePeriod => {
-      if (!period) return false;
+    const isValidDatePeriod = (period: string): period is DatePeriod => {
       return ['today', 'current-week', 'current-month', 'last-month'].includes(period);
     };
 
@@ -147,23 +147,13 @@ function TransactionsContent() {
       const { from, to } = storage.getDateRangeFromPeriod(urlPeriodParam);
       setDateFrom(from);
       setDateTo(to);
-    } else {
-      // If no period or an invalid one, clear the dates
-      // This allows manual date input to still work if period is removed from URL
-      // Or if a quick filter is cleared, the date inputs should also clear.
-      const manualDateFrom = searchParams.get('from');
-      const manualDateTo = searchParams.get('to');
-      if (!manualDateFrom && !manualDateTo && !urlPeriodParam) {
-        setDateFrom('');
-        setDateTo('');
-      }
     }
   }, [searchParams]);
 
   // --- Fetch Data using useQuery ---
    const { data: transactions = [], isLoading: isLoadingTransactions, isError: isErrorTransactions, error: transactionsError } = useQuery<Transaction[]>({
-    queryKey: ['transactions', searchParams.get('period')],
-    queryFn: () => storage.getTransactions(searchParams.get('period') as DatePeriod || undefined),
+    queryKey: ['transactions'],
+    queryFn: async () => await storage.getTransactions(),
   });
 
   const { data: cards = [], isLoading: isLoadingCards, isError: isErrorCards, error: cardsError } = useQuery<Card[]>({
@@ -336,10 +326,22 @@ function TransactionsContent() {
               {(dateFrom || dateTo) && (
                 <FilterBadge
                   label="Period"
-                  value={
-                    dateFrom === dateTo
-                      ? "Today"
-                      : `${dateFrom} ↔ ${dateTo}`
+                  value={(() => {
+                    // If dates are equal, check if it's today
+                    if (dateFrom === dateTo) {
+                      const selectedDate = new Date(dateFrom);
+                      const today = new Date();
+                      const isToday = 
+                        selectedDate.getDate() === today.getDate() &&
+                        selectedDate.getMonth() === today.getMonth() &&
+                        selectedDate.getFullYear() === today.getFullYear();
+                      
+                      if (isToday) return 'Today';
+                      return new Date(dateFrom).toLocaleDateString();
+                    }
+                    // Different dates - show range
+                    return `${new Date(dateFrom).toLocaleDateString()} ↔ ${new Date(dateTo).toLocaleDateString()}`;
+                  })()
                   }
                   onRemove={() => {
                     setDateFrom("");
@@ -485,6 +487,33 @@ function TransactionsContent() {
                 setDateTo(to);
                 setSelectedCategory("");
                 setSelectedCard("");
+                
+                // Clear the period parameter since we're using custom dates
+                const newParams = new URLSearchParams(searchParams.toString());
+                newParams.delete('period');
+                router.push(`?${newParams.toString()}`);
+              }}
+            />
+          </div>
+
+          {/* Transaction Summary */}
+          <div className="mt-8">
+            <TransactionSummary 
+              transactions={filteredTransactions}
+              dateRange={{
+                // If no dates are set, find the date range from transactions
+                from: dateFrom ? new Date(dateFrom) : new Date(Math.min(...filteredTransactions.map((tx: Transaction) => new Date(tx.date).getTime()))),
+                to: dateTo ? new Date(dateTo) : new Date(Math.max(...filteredTransactions.map((tx: Transaction) => new Date(tx.date).getTime())))
+              }}
+              onCategoryClick={(categoryName) => {
+                // Find the category ID from the name
+                const category = categories.find(c => c.name === categoryName);
+                if (category) {
+                  setSelectedCategory(category.id);
+                  const newParams = new URLSearchParams(searchParams.toString());
+                  newParams.set('category', category.id);
+                  router.push(`?${newParams.toString()}`);
+                }
               }}
             />
           </div>

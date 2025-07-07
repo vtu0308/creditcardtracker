@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, CreditCard, LayoutList, Settings, Menu, Sun, Target } from "lucide-react"
+import { Home, CreditCard, LayoutList, Settings, Menu, Sun, Target, TrendingUp, Banknote } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -23,6 +23,7 @@ export function MainNav() {
     { title: "Cards", href: "/cards", icon: CreditCard },
     { title: "Transactions", href: "/transactions", icon: LayoutList },
     { title: "Budget", href: "/budget", icon: Target },
+    { title: "Net Worth", href: "/net-worth", icon: TrendingUp },
     { title: "Settings", href: "/settings", icon: Settings }
   ];
 
@@ -71,9 +72,9 @@ export function MainNav() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <span className="flex items-center justify-center h-10 w-10 rounded-lg" style={{ background: "hsl(340, 43%, 66%)" }}>
-                <CreditCard className="h-6 w-6 text-white" />
+                <Banknote className="h-6 w-6 text-white" />
               </span>
-              <span className="font-bold text-black">CardTracker</span>
+              <span className="font-bold text-black">Wealth Manager</span>
             </Link>
           </div>
 
@@ -103,13 +104,13 @@ export function MainNav() {
                   <SheetTitle className="text-left">
                     <Link href="/" className="flex items-center space-x-2">
                       <span className="flex items-center justify-center h-10 w-10 rounded-lg" style={{ background: "hsl(340, 43%, 66%)", color: "white" }}>
-                        <CreditCard className="h-6 w-6" />
+                        <Banknote className="h-6 w-6" />
                       </span>
-                      <span className="text-base font-semibold">CardTracker</span>
+                      <span className="text-base font-semibold">Wealth Manager</span>
                     </Link>
                   </SheetTitle>
                   <SheetDescription className="text-left text-sm text-muted-foreground pt-1">
-                    Navigate through your CardTracker application.
+                    Navigate through your Wealth Manager application.
                   </SheetDescription>
                 </SheetHeader>
                 <nav className="flex flex-col gap-2">
