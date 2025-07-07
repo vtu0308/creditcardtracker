@@ -1,7 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Transaction } from "@/lib/storage";
-import { TrendingUp, CreditCard } from "lucide-react";
+import { TrendingUp, CreditCard, ChevronDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { useState } from "react";
 
 interface TopCategory {
   category: string;
@@ -23,23 +29,23 @@ function TopSpendingCategory({ category, amount, count, percentage, index, onCli
   return (
     <button
       onClick={onClick}
-      className="relative w-full bg-[#F5E8EB] hover:bg-[#F3E2E7] transition-colors rounded-3xl p-4 flex flex-col gap-2 group cursor-pointer shadow-sm text-left"
+      className="relative w-full bg-[#F9F2F4] hover:bg-[#F5E8EB] transition-colors rounded-2xl sm:rounded-3xl p-4 flex flex-col gap-2 group cursor-pointer shadow-sm text-left"
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-[#78A0A0]" />
-          <span className="text-[#5D5053] text-base font-semibold">{category}</span>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-[#78A0A0]" />
+          <span className="text-[#5D5053] text-sm sm:text-base font-medium sm:font-semibold">{category}</span>
         </div>
-        <span className="text-[#71717A] opacity-70 text-xs bg-[#F1DDE3] px-3 py-1 rounded-full">#{index}</span>
+        <span className="text-[#5D5053] text-xs bg-[#F1DDE3] px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">#{index}</span>
       </div>
-      <div className="text-[#CE839C] text-2xl font-bold">
+      <div className="text-[#3D7A7A] text-lg sm:text-2xl font-bold">
         {formatCurrency(amount)}
       </div>
-      <div className="flex items-center justify-between text-[#71717A] opacity-60 text-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-[#5D5053] text-xs sm:text-sm">
         <span>
           {count} transaction{count !== 1 ? 's' : ''}
         </span>
-        <span>
+        <span className="mt-0.5 sm:mt-0">
           {percentage.toFixed(1)}%
         </span>
       </div>
@@ -114,6 +120,7 @@ function groupTransactionsByCard(transactions: Transaction[]) {
 }
 
 export function TransactionSummary({ transactions, dateRange, onCategoryClick }: TransactionSummaryProps) {
+  const [isOpen, setIsOpen] = useState(true);
   const totalAmount = transactions.reduce((sum, tx) => sum + tx.vndAmount, 0);
   const averageAmount = totalAmount / (transactions.length || 1);
   
@@ -133,56 +140,80 @@ export function TransactionSummary({ transactions, dateRange, onCategoryClick }:
   const cardUsage = groupTransactionsByCard(transactions);
 
   return (
-    <div className="w-full rounded-lg bg-[#FDF9FA] border">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="bg-white rounded-lg shadow-sm border border-gray-100 w-full">
       {/* Header */}
-      <div className="bg-[#F3E2E7] rounded-t-lg px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-start gap-3">
-            <TrendingUp className="w-5 h-5 text-[#78A0A0] mt-1" />
-            <div>
-              <h2 className="text-lg font-bold text-black">Transaction Summary</h2>
-              <p className="text-sm text-[#71717A]">Complete transaction overview</p>
+      <CollapsibleTrigger className="w-full">
+        <div className="bg-[#F5E8EB] rounded-t-lg px-4 sm:px-6 py-3 sm:py-4">
+          <div className="sm:flex sm:items-center sm:justify-between">
+            {/* Mobile Layout */}
+            <div className="block sm:hidden">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="w-4 h-4 text-[#78A0A0] mt-1 flex-shrink-0" />
+                  <div className="flex flex-col items-start">
+                    <h2 className="text-base font-bold text-black">Transaction Summary</h2>
+                    <p className="text-xs text-[#5D5053]">Complete transaction overview</p>
+                    <div className="mt-2 text-xs text-[#5D5053] bg-[#F1DDE3] px-3 py-1.5 rounded-lg inline-block">
+                      {dateRange.from.toLocaleDateString()} - {dateRange.to.toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-[#78A0A0] transition-transform ${isOpen ? 'rotate-180' : ''} flex-shrink-0`} />
+              </div>
+            </div>
+
+            {/* Desktop Layout */}
+            <div className="hidden sm:flex sm:items-start sm:gap-3">
+              <TrendingUp className="w-5 h-5 text-[#78A0A0] mt-1 flex-shrink-0" />
+              <div className="flex flex-col items-start">
+                <h2 className="text-lg font-bold text-black">Transaction Summary</h2>
+                <p className="text-sm text-[#5D5053]">Complete transaction overview</p>
+              </div>
+            </div>
+            <div className="hidden sm:flex sm:items-center sm:gap-4">
+              <div className="text-sm text-[#5D5053] bg-[#F1DDE3] px-3 py-1 rounded-full">
+                {dateRange.from.toLocaleDateString()} - {dateRange.to.toLocaleDateString()}
+              </div>
+              <ChevronDown className={`w-5 h-5 text-[#78A0A0] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
           </div>
-          <div className="text-sm text-[#71717A] bg-[#F1DDE3] px-3 py-1 rounded-full">
-            {dateRange.from.toLocaleDateString()} - {dateRange.to.toLocaleDateString()}
-          </div>
         </div>
-      </div>
-      <div className="p-6 space-y-6">
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Total Amount */}
-          <div className="bg-[#F3E2E7] rounded-lg p-4">
-            <h3 className="text-sm font-medium text-[#5D5053]">Total Amount</h3>
-            <p className="text-2xl font-bold text-[#CE839C] mt-1">
+          <div className="bg-[#F9F2F4] rounded-lg p-4 w-full">
+            <h3 className="text-xs sm:text-sm font-medium text-[#5D5053]">Total Amount</h3>
+            <p className="text-lg sm:text-2xl font-bold text-[#3D7A7A] mt-0.5 sm:mt-1">
               {formatCurrency(totalAmount)}
             </p>
           </div>
 
           {/* Transaction Count */}
-          <div className="bg-[#F3E2E7] rounded-lg p-4">
-            <h3 className="text-sm font-medium text-[#5D5053]">Transactions</h3>
-            <p className="text-2xl font-bold text-[#CE839C] mt-1">{transactions.length}</p>
-            <p className="text-sm text-[#5D5053]">{activityLevel}</p>
+          <div className="bg-[#F9F2F4] rounded-lg p-4 w-full">
+            <h3 className="text-xs sm:text-sm font-medium text-[#5D5053]">Transactions</h3>
+            <p className="text-lg sm:text-2xl font-bold text-[#3D7A7A] mt-0.5 sm:mt-1">{transactions.length}</p>
+            <p className="text-xs sm:text-sm text-[#5D5053] mt-0.5 sm:mt-1">{activityLevel}</p>
           </div>
 
           {/* Average */}
-          <div className="bg-[#F3E2E7] rounded-lg p-4">
-            <h3 className="text-sm font-medium text-[#5D5053]">Average</h3>
-            <p className="text-2xl font-bold text-[#CE839C] mt-1">
+          <div className="bg-[#F9F2F4] rounded-lg p-4 w-full">
+            <h3 className="text-xs sm:text-sm font-medium text-[#5D5053]">Average</h3>
+            <p className="text-lg sm:text-2xl font-bold text-[#3D7A7A] mt-0.5 sm:mt-1">
               {formatCurrency(averageAmount)}
             </p>
-            <p className="text-sm text-[#5D5053]">Per transaction</p>
+            <p className="text-xs sm:text-sm text-[#5D5053] mt-0.5 sm:mt-1">Per transaction</p>
           </div>
 
           {/* Frequency */}
-          <div className="bg-[#F3E2E7] rounded-lg p-4">
-            <h3 className="text-sm font-medium text-[#5D5053]">Frequency</h3>
-            <p className="text-2xl font-bold text-[#CE839C] mt-1">
+          <div className="bg-[#F9F2F4] rounded-lg p-4 w-full">
+            <h3 className="text-xs sm:text-sm font-medium text-[#5D5053]">Frequency</h3>
+            <p className="text-lg sm:text-2xl font-bold text-[#3D7A7A] mt-0.5 sm:mt-1">
               {Math.round(frequency * 10) / 10}
             </p>
-            <p className="text-sm text-[#5D5053]">
+            <p className="text-xs sm:text-sm text-[#5D5053] mt-0.5 sm:mt-1">
               Per {isWeeklyView ? 'week' : 'day'} average
             </p>
           </div>
@@ -190,8 +221,8 @@ export function TransactionSummary({ transactions, dateRange, onCategoryClick }:
 
         {/* Top Spending Categories */}
         <div>
-          <h3 className="text-lg font-semibold text-[#5D5053] mb-4">Top Spending Categories</h3>
-          <div className="grid grid-cols-3 gap-6">
+          <h3 className="text-base sm:text-lg font-semibold text-[#5D5053] mb-3 sm:mb-4">Top Spending Categories</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {topCategories.map((category, index) => (
               <TopSpendingCategory
                 key={category.category}
@@ -208,30 +239,31 @@ export function TransactionSummary({ transactions, dateRange, onCategoryClick }:
 
         {/* Card Usage Breakdown */}
         <div>
-          <h3 className="text-lg font-semibold text-[#5D5053] mb-4">Card Usage Breakdown</h3>
-          <div className="space-y-4">
+          <h3 className="text-base sm:text-lg font-semibold text-[#5D5053] mb-3 sm:mb-4">Card Usage Breakdown</h3>
+          <div className="space-y-3 sm:space-y-4">
             {cardUsage.map((card) => (
               <div
                 key={card.card}
-                className="bg-[#F3E2E7] rounded-lg p-4 flex items-center justify-between"
+                className="bg-[#F9F2F4] rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 w-full"
               >
                 <div className="flex items-center gap-3">
-                  <CreditCard className="w-5 h-5 text-[#78A0A0]" />
+                  <CreditCard className="w-4 sm:w-5 h-4 sm:h-5 text-[#78A0A0]" />
                   <div>
-                    <p className="font-medium text-[#5D5053]">{card.card}</p>
-                    <p className="text-sm text-[#5D5053] mt-2">
-                      {card.count} transaction{card.count !== 1 ? 's' : ''} · {((card.amount / totalAmount) * 100).toFixed(1)}%
+                    <p className="text-sm sm:text-base font-medium text-[#5D5053]">{card.card}</p>
+                    <p className="text-xs sm:text-sm text-[#5D5053] mt-1 sm:mt-2">
+                      <span className="text-[#5D5053]">{card.count} transaction{card.count !== 1 ? 's' : ''} · {((card.amount / totalAmount) * 100).toFixed(1)}%</span>
                     </p>
                   </div>
                 </div>
-                <p className="text-xl font-bold text-[#CE839C]">
+                <p className="text-base sm:text-xl font-bold text-[#3D7A7A]">
                   {formatCurrency(card.amount)}
                 </p>
               </div>
             ))}
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

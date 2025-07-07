@@ -26,7 +26,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
       <div className="grid gap-4 md:grid-cols-3">
         <Card 
         className="bg-primary/5 cursor-pointer group relative hover:shadow-md hover:bg-primary/10 transition-all duration-200" 
-        onClick={() => router.push(`/transactions?period=1D`)}
+        onClick={() => router.push(`/transactions?period=today`)}
       >
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
           <ArrowUpRight className="h-4 w-4 text-primary" />
@@ -48,7 +48,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
 
       <Card 
         className="bg-primary/5 cursor-pointer group relative hover:shadow-md hover:bg-primary/10 transition-all duration-200"
-        onClick={() => router.push(`/transactions?period=week`)}
+        onClick={() => router.push(`/transactions?period=current-week`)}
       >
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
           <ArrowUpRight className="h-4 w-4 text-primary" />
@@ -70,7 +70,7 @@ export function SpendingOverview({ todaySpending, weekSpending, monthSpending }:
 
       <Card 
         className="bg-primary/5 cursor-pointer group relative hover:shadow-md hover:bg-primary/10 transition-all duration-200"
-        onClick={() => router.push(`/transactions?period=month`)}
+        onClick={() => router.push(`/transactions?period=current-month`)}
       >
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
           <ArrowUpRight className="h-4 w-4 text-primary" />
